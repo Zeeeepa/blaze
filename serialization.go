@@ -184,8 +184,8 @@ func (e *indexEncoder) buildNodeIndexMap(skipList SkipList) map[nodePosition]int
 	for current != nil {
 		// Create a compact position identifier
 		pos := nodePosition{
-			DocID:    uint32(current.Key.DocumentID),
-			Position: uint32(current.Key.Offset),
+			DocID:    int32(current.Key.DocumentID),
+			Position: int32(current.Key.Offset),
 		}
 
 		// Assign this node the next sequential index
@@ -203,7 +203,7 @@ func (e *indexEncoder) buildNodeIndexMap(skipList SkipList) map[nodePosition]int
 //
 // FORMAT:
 // -------
-// For each node: [DocID: uint32][Offset: uint32]
+// For each node: [DocID: int32][Offset: int32]
 //
 // EXAMPLE:
 // --------
@@ -221,10 +221,10 @@ func (e *indexEncoder) encodeNodePositions(skipList SkipList) []byte {
 	// Traverse all nodes in the skip list
 	for current != nil {
 		// Write document ID (4 bytes)
-		binary.Write(buf, binary.LittleEndian, uint32(current.Key.DocumentID))
+		binary.Write(buf, binary.LittleEndian, int32(current.Key.DocumentID))
 
 		// Write offset (4 bytes)
-		binary.Write(buf, binary.LittleEndian, uint32(current.Key.Offset))
+		binary.Write(buf, binary.LittleEndian, int32(current.Key.Offset))
 
 		// Move to next node
 		current = current.Tower[0]
@@ -334,8 +334,8 @@ func (e *indexEncoder) collectTowerIndices(node *Node, nodeMap map[nodePosition]
 
 		// Get the position of the target node
 		pos := nodePosition{
-			DocID:    uint32(node.Tower[level].Key.DocumentID),
-			Position: uint32(node.Tower[level].Key.Offset),
+			DocID:    int32(node.Tower[level].Key.DocumentID),
+			Position: int32(node.Tower[level].Key.Offset),
 		}
 
 		// Look up the target node's index
@@ -347,18 +347,18 @@ func (e *indexEncoder) collectTowerIndices(node *Node, nodeMap map[nodePosition]
 
 // nodePosition represents a compact node position for encoding
 //
-// We use uint32 instead of float64 to save space:
-// - float64: 8 bytes
-// - uint32: 4 bytes
-// - Savings: 50% smaller!
+// We use int32 to match our internal representation:
+// - Document IDs are integers
+// - Positions are integers
+// - Sentinel values (BOF/EOF) use int as well
 //
-// This is safe because:
-// - Document IDs are integers (not floats)
-// - Positions are integers (not floats)
-// - We only use float64 for sentinel values (BOF/EOF) during search
+// int32 provides:
+// - 4 bytes per value (efficient storage)
+// - Range: -2,147,483,648 to 2,147,483,647
+// - Sufficient for document IDs and positions
 type nodePosition struct {
-	DocID    uint32
-	Position uint32
+	DocID    int32
+	Position int32
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -522,24 +522,24 @@ func (d *indexDecoder) decodeNodePositions() (map[int]*Node, error) {
 	nodeIndex := 1
 
 	// Each position is 8 bytes: 4 for DocID + 4 for Offset
-	// So numValues = dataLength / 4 gives us the total number of uint32s
+	// So numValues = dataLength / 4 gives us the total number of int32s
 	// And we process them in pairs
 	numValues := dataLength / 4
 
 	for i := 0; i < numValues; i += 2 {
-		// Read Document ID
-		docID := binary.LittleEndian.Uint32(d.data[d.offset : d.offset+4])
+		// Read Document ID (as int32)
+		docID := int32(binary.LittleEndian.Uint32(d.data[d.offset : d.offset+4]))
 		d.offset += 4
 
-		// Read Offset
-		offset := binary.LittleEndian.Uint32(d.data[d.offset : d.offset+4])
+		// Read Offset (as int32)
+		offset := int32(binary.LittleEndian.Uint32(d.data[d.offset : d.offset+4]))
 		d.offset += 4
 
 		// Create a new node with this position
 		node := &Node{
 			Key: Position{
-				DocumentID: float64(docID),
-				Offset:     float64(offset),
+				DocumentID: int(docID),
+				Offset:     int(offset),
 			},
 		}
 

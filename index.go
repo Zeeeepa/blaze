@@ -146,10 +146,9 @@ func (idx *InvertedIndex) Index(docID int, document string) {
 //
 // 3. Store the updated SkipList back in the map
 //
-// Why use float64 for DocumentID and Offset?
-// - The SkipList uses sentinel values (BOF=-∞, EOF=+∞) to mark boundaries
-// - These infinities are only available as float64 in Go
-// - In practice, we cast back to int when needed
+// DocumentID and Offset are stored as ints
+// - The SkipList uses sentinel values (BOF=MinInt, EOF=MaxInt) to mark boundaries
+// - All position values are integers (no casting needed)
 func (idx *InvertedIndex) indexToken(token string, docID, position int) {
 	// Check if this token already has a posting list
 	skipList, exists := idx.getPostingList(token)
@@ -160,8 +159,8 @@ func (idx *InvertedIndex) indexToken(token string, docID, position int) {
 
 	// Add this occurrence to the token's posting list
 	skipList.Insert(Position{
-		DocumentID: float64(docID),    // Which document?
-		Offset:     float64(position), // Where in the document?
+		DocumentID: docID,    // Which document?
+		Offset:     position, // Where in the document?
 	})
 
 	// Save the updated SkipList back to the map

@@ -449,9 +449,10 @@ func TestInvertedIndex_RankProximity_ProximityScoring(t *testing.T) {
 
 	for _, result := range results {
 		docID := result.Offsets[0].GetDocumentID()
-		if docID == 1 {
+		switch docID {
+		case 1:
 			doc1Score = result.Score
-		} else if docID == 2 {
+		case 2:
 			doc2Score = result.Score
 		}
 	}

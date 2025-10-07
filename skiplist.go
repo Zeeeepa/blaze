@@ -57,10 +57,10 @@ const MaxHeight = 32 // Maximum tower height (supports billions of elements)
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENTINEL VALUES
 // ═══════════════════════════════════════════════════════════════════════════════
-// We use +∞ and -∞ as boundary markers
+// We use MaxInt and MinInt as boundary markers
 //
-// WHY USE INFINITY?
-// -----------------
+// WHY USE MAX/MIN INT?
+// --------------------
 // - Makes comparisons cleaner (no special cases for "empty")
 // - Always guarantees: BOF < any_position < EOF
 // - Simplifies edge cases in search algorithms
@@ -70,8 +70,8 @@ const MaxHeight = 32 // Maximum tower height (supports billions of elements)
 //	Without sentinels: Need to check "is this the first call?"
 //	With sentinels: Just use BOF as the starting position!
 var (
-	EOF = math.Inf(1)  // End Of File: positive infinity (larger than any real position)
-	BOF = math.Inf(-1) // Beginning Of File: negative infinity (smaller than any real position)
+	EOF = math.MaxInt // End Of File: maximum integer value (larger than any real position)
+	BOF = math.MinInt // Beginning Of File: minimum integer value (smaller than any real position)
 )
 
 var (
@@ -89,11 +89,11 @@ var (
 // Document 5: "The quick brown fox jumps"
 // Position{DocumentID: 5, Offset: 2} refers to "brown"
 //
-// WHY USE FLOAT64?
-// ----------------
-// - We need to support sentinel values (BOF = -∞, EOF = +∞)
-// - Go's math.Inf() returns float64
-// - In practice, we cast to int for actual document IDs and offsets
+// WHY USE INT?
+// ------------
+// - Represents actual integer document IDs and offsets
+// - Supports sentinel values (BOF = MinInt, EOF = MaxInt)
+// - No casting needed - simpler and more efficient
 //
 // ORDERING:
 // ---------
@@ -103,8 +103,8 @@ var (
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 type Position struct {
-	DocumentID float64 // Which document? (float64 to support +∞/-∞)
-	Offset     float64 // Which word in the document? (0-indexed)
+	DocumentID int // Which document?
+	Offset     int // Which word in the document? (0-indexed)
 }
 
 // Sentinel positions for convenience
@@ -119,16 +119,16 @@ var (
 // These methods make Position comparisons more readable and less error-prone
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// GetDocumentID returns the document ID as an integer
-// (Convenience method for when we know it's not a sentinel value)
+// GetDocumentID returns the document ID
+// (Convenience method for consistent API)
 func (p *Position) GetDocumentID() int {
-	return int(p.DocumentID)
+	return p.DocumentID
 }
 
-// GetOffset returns the offset as an integer
-// (Convenience method for when we know it's not a sentinel value)
+// GetOffset returns the offset
+// (Convenience method for consistent API)
 func (p *Position) GetOffset() int {
-	return int(p.Offset)
+	return p.Offset
 }
 
 // IsBeginning checks if this is the BOF sentinel

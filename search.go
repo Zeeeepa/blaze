@@ -499,7 +499,7 @@ func (m *Match) GetKey() (string, error) {
 	// Step 1: Build a string from all document IDs
 	docIDs := make([]string, len(m.Offsets))
 	for i, offset := range m.Offsets {
-		docIDs[i] = fmt.Sprintf("%f", offset.DocumentID)
+		docIDs[i] = fmt.Sprintf("%v", offset.DocumentID)
 	}
 
 	combinedID := strings.Join(docIDs, "")
@@ -631,7 +631,7 @@ func (idx *InvertedIndex) collectProximityMatches(tokens []string) []Match {
 		// Formula: 1 / (distance + 1)
 		// - Smaller distance → higher score
 		// - +1 to avoid division by zero when start==end
-		proximity := coverEnd.Offset - coverStart.Offset + 1
+		proximity := float64(coverEnd.Offset - coverStart.Offset + 1)
 		currentScore += 1 / proximity
 
 		// Find the next cover

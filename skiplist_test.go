@@ -755,7 +755,7 @@ func TestSkipList_SameDocument_DifferentOffsets(t *testing.T) {
 
 	// Insert multiple positions in the same document
 	for offset := 0; offset < 10; offset++ {
-		sl.Insert(Position{DocumentID: 1, Offset: float64(offset)})
+		sl.Insert(Position{DocumentID: 1, Offset: offset})
 	}
 
 	// Verify all are present and in order
@@ -775,7 +775,7 @@ func TestSkipList_SameDocument_DifferentOffsets(t *testing.T) {
 	}
 
 	for offset, pos := range result {
-		expected := Position{DocumentID: 1, Offset: float64(offset)}
+		expected := Position{DocumentID: 1, Offset: offset}
 
 		if !pos.Equals(expected) {
 			t.Errorf("Position at offset %d = %v, want %v", offset, pos, expected)
@@ -789,7 +789,7 @@ func TestSkipList_MultipleDocs_MultipleOffsets(t *testing.T) {
 	// Insert grid: 3 documents x 5 offsets each
 	for doc := 1; doc <= 3; doc++ {
 		for offset := 0; offset < 5; offset++ {
-			sl.Insert(Position{DocumentID: float64(doc), Offset: float64(offset)})
+			sl.Insert(Position{DocumentID: doc, Offset: offset})
 		}
 	}
 
@@ -817,7 +817,7 @@ func TestSkipList_MultipleDocs_MultipleOffsets(t *testing.T) {
 				t.Fatal("Not enough positions in result")
 			}
 
-			expected := Position{DocumentID: float64(doc), Offset: float64(offset)}
+			expected := Position{DocumentID: doc, Offset: offset}
 
 			if !result[idx].Equals(expected) {
 				t.Errorf("Position at index %d = %v, want %v", idx, result[idx], expected)
@@ -834,7 +834,7 @@ func TestSkipList_LargeDataset(t *testing.T) {
 	// Insert 1000 positions
 	n := 1000
 	for i := 0; i < n; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 10), Offset: float64(i % 10)})
+		sl.Insert(Position{DocumentID: i / 10, Offset: i % 10})
 	}
 
 	// Verify count
@@ -873,21 +873,21 @@ func TestSkipList_LargeDataset(t *testing.T) {
 }
 
 func TestSkipList_InfinityValues(t *testing.T) {
-	// Test that infinity values work as sentinels
+	// Test that sentinel values work correctly
 	if BOF >= 0 {
-		t.Error("BOF should be negative infinity")
+		t.Error("BOF should be negative (math.MinInt)")
 	}
 
 	if EOF <= 0 {
-		t.Error("EOF should be positive infinity")
+		t.Error("EOF should be positive (math.MaxInt)")
 	}
 
-	if !math.IsInf(BOF, -1) {
-		t.Error("BOF should be negative infinity")
+	if BOF != math.MinInt {
+		t.Errorf("BOF should be math.MinInt, got %d", BOF)
 	}
 
-	if !math.IsInf(EOF, 1) {
-		t.Error("EOF should be positive infinity")
+	if EOF != math.MaxInt {
+		t.Errorf("EOF should be math.MaxInt, got %d", EOF)
 	}
 
 	// BOF should be less than any regular position
@@ -911,7 +911,7 @@ func BenchmarkSkipList_Insert(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 1000), Offset: float64(i % 1000)})
+		sl.Insert(Position{DocumentID: i / 1000, Offset: i % 1000})
 	}
 }
 
@@ -920,12 +920,12 @@ func BenchmarkSkipList_Find(b *testing.B) {
 
 	// Pre-populate with 10000 elements
 	for i := 0; i < 10000; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 100), Offset: float64(i % 100)})
+		sl.Insert(Position{DocumentID: i / 100, Offset: i % 100})
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sl.Find(Position{DocumentID: float64(i / 100 % 100), Offset: float64(i % 100)})
+		sl.Find(Position{DocumentID: i / 100 % 100, Offset: i % 100})
 	}
 }
 
@@ -935,11 +935,11 @@ func BenchmarkSkipList_Delete(b *testing.B) {
 		b.StopTimer()
 		sl := NewSkipList()
 		for j := 0; j < 1000; j++ {
-			sl.Insert(Position{DocumentID: float64(j / 10), Offset: float64(j % 10)})
+			sl.Insert(Position{DocumentID: j / 10, Offset: j % 10})
 		}
 		b.StartTimer()
 
-		sl.Delete(Position{DocumentID: float64(i / 10 % 100), Offset: float64(i % 10)})
+		sl.Delete(Position{DocumentID: i / 10 % 100, Offset: i % 10})
 	}
 }
 
@@ -948,7 +948,7 @@ func BenchmarkSkipList_Iterator(b *testing.B) {
 
 	// Pre-populate with 1000 elements
 	for i := 0; i < 1000; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 10), Offset: float64(i % 10)})
+		sl.Insert(Position{DocumentID: i / 10, Offset: i % 10})
 	}
 
 	b.ResetTimer()
@@ -970,12 +970,12 @@ func BenchmarkSkipList_FindLessThan(b *testing.B) {
 
 	// Pre-populate with 10000 elements
 	for i := 0; i < 10000; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 100), Offset: float64(i % 100)})
+		sl.Insert(Position{DocumentID: i / 100, Offset: i % 100})
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sl.FindLessThan(Position{DocumentID: float64(i / 100 % 100), Offset: float64(i % 100)})
+		sl.FindLessThan(Position{DocumentID: i / 100 % 100, Offset: i % 100})
 	}
 }
 
@@ -984,11 +984,11 @@ func BenchmarkSkipList_FindGreaterThan(b *testing.B) {
 
 	// Pre-populate with 10000 elements
 	for i := 0; i < 10000; i++ {
-		sl.Insert(Position{DocumentID: float64(i / 100), Offset: float64(i % 100)})
+		sl.Insert(Position{DocumentID: i / 100, Offset: i % 100})
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sl.FindGreaterThan(Position{DocumentID: float64(i / 100 % 100), Offset: float64(i % 100)})
+		sl.FindGreaterThan(Position{DocumentID: i / 100 % 100, Offset: i % 100})
 	}
 }
