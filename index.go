@@ -45,64 +45,6 @@ var (
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BM25 RANKING SYSTEM
-// ═══════════════════════════════════════════════════════════════════════════════
-// BM25 (Best Matching 25) is a ranking function used by search engines to estimate
-// the relevance of documents to a given search query.
-//
-// WHY BM25?
-// ---------
-// 1. Industry standard: Used by Elasticsearch, Solr, Lucene
-// 2. Accounts for document length (longer docs don't unfairly rank higher)
-// 3. Accounts for term frequency saturation (10 vs 100 occurrences matter less)
-// 4. Accounts for term rarity (rare terms are more significant)
-//
-// BM25 FORMULA:
-// -------------
-// For each term in the query:
-//   score += IDF(term) * (TF * (k1 + 1)) / (TF + k1 * (1 - b + b * (docLen / avgDocLen)))
-//
-// Where:
-//   IDF = Inverse Document Frequency (how rare is this term?)
-//   TF = Term Frequency (how often does term appear in this doc?)
-//   k1 = Term frequency saturation parameter (typically 1.2-2.0)
-//   b = Length normalization parameter (typically 0.75)
-//   docLen = Length of this document
-//   avgDocLen = Average document length in the corpus
-//
-// EXAMPLE:
-// --------
-// Query: "machine learning"
-// Doc A: 100 words, contains "machine" 3 times, "learning" 2 times
-// Doc B: 500 words, contains "machine" 5 times, "learning" 8 times
-//
-// Despite Doc B having more occurrences, Doc A might score higher because:
-// 1. Doc A is shorter (length normalization)
-// 2. The density of query terms is higher in Doc A
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// BM25Parameters holds the tuning parameters for BM25 algorithm
-type BM25Parameters struct {
-	K1 float64 // Term frequency saturation (typical: 1.2-2.0)
-	B  float64 // Length normalization (typical: 0.75)
-}
-
-// DefaultBM25Parameters returns the standard BM25 parameters
-func DefaultBM25Parameters() BM25Parameters {
-	return BM25Parameters{
-		K1: 1.5,  // Moderate term frequency saturation
-		B:  0.75, // Standard length normalization
-	}
-}
-
-// DocumentStats stores statistics about a single document
-type DocumentStats struct {
-	DocID     int            // Document identifier
-	Length    int            // Number of terms in the document
-	TermFreqs map[string]int // How many times each term appears
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // CORE DATA STRUCTURE: InvertedIndex
 // ═══════════════════════════════════════════════════════════════════════════════
 // The InvertedIndex is the main structure that holds all searchable data.
@@ -127,24 +69,16 @@ type DocumentStats struct {
 type InvertedIndex struct {
 	mu           sync.Mutex          // Protects against concurrent access
 	PostingsList map[string]SkipList // Word → List of where it appears
-
-	// ===============================
-	// BM25 INDEXING DATA STRUCTURES
-	// ===============================
-	DocStats   map[int]DocumentStats // DocID → statistics
-	TotalDocs  int                   // Total number of indexed documents
-	TotalTerms int64                 // Total number of terms across all docs
-	BM25Params BM25Parameters        // BM25 tuning parameters
 }
 
-// NewInvertedIndex creates a new empty inverted index with BM25 support
+// NewInvertedIndex creates a new empty inverted index
+//
+// Why use make() instead of {}?
+// - make() pre-allocates memory for the map, which is slightly more efficient
+// - For maps, both work the same, but make() is more explicit
 func NewInvertedIndex() *InvertedIndex {
 	return &InvertedIndex{
 		PostingsList: make(map[string]SkipList),
-		DocStats:     make(map[int]DocumentStats),
-		TotalDocs:    0,
-		TotalTerms:   0,
-		BM25Params:   DefaultBM25Parameters(),
 	}
 }
 
@@ -182,20 +116,6 @@ func NewInvertedIndex() *InvertedIndex {
 // Thread Safety Note:
 // - We lock the entire indexing operation to prevent race conditions
 // - If we didn't lock, two goroutines could corrupt the data structure
-// ═══════════════════════════════════════════════════════════════════════════════
-// BM25 INDEXING
-// ═══════════════════════════════════════════════════════════════════════════════
-// Index also enriches the index with BM25 statistics
-//
-// WHAT'S DIFFERENT WITH BM25:
-// ---------------------------
-// In addition to building the inverted index, we now track:
-// 1. Document length (number of terms)
-// 2. Term frequencies per document (how many times each term appears)
-// 3. Total number of documents (for IDF calculation)
-// 4. Total number of terms (for average document length)
-//
-// This metadata enables BM25 scoring later during search.
 func (idx *InvertedIndex) Index(docID int, document string) {
 	idx.mu.Lock()         // Acquire lock - only one goroutine can index at a time
 	defer idx.mu.Unlock() // Release lock when function returns (even if it panics)
@@ -206,23 +126,10 @@ func (idx *InvertedIndex) Index(docID int, document string) {
 	// Example: "The Quick Brown Fox!" → ["quick", "brown", "fox"]
 	tokens := Analyze(document)
 
-	// STEP 2: Initialize document statistics
-	docStats := DocumentStats{
-		DocID:     docID,
-		Length:    len(tokens),
-		TermFreqs: make(map[string]int),
-	}
-
-	// STEP 3: Index each token and track term frequencies
+	// STEP 2: Record each token's position in the document
 	for position, token := range tokens {
 		idx.indexToken(token, docID, position)
-		docStats.TermFreqs[token]++
 	}
-
-	// STEP 4: Update global statistics
-	idx.DocStats[docID] = docStats
-	idx.TotalDocs++
-	idx.TotalTerms += int64(len(tokens))
 }
 
 // indexToken adds a single token occurrence to the index

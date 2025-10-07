@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"sort"
 	"strings"
 )
 
@@ -466,241 +465,54 @@ func (idx *InvertedIndex) findCoverStart(tokens []string, endPos Position) Posit
 //	Offsets: [Doc3:Pos1, Doc3:Pos5]  ← This document matches from Pos1 to Pos5
 //	Score: 2.7                         ← Relevance score
 type Match struct {
-	DocID   int        // Document identifier
 	Offsets []Position // Where the match was found [start, end]
 	Score   float64    // How relevant is this match?
 }
 
-// GetKey generates a unique identifier for the match
+// GetKey generates a unique identifier for this match
+//
+// WHY DO WE NEED THIS?
+// --------------------
+// We need to uniquely identify each match for:
+// 1. Deduplication: Avoid showing the same result twice
+// 2. Caching: Store and retrieve results efficiently
+// 3. Result tracking: Identify which result a user clicked
+//
+// HOW IT WORKS:
+// -------------
+//
+//  1. Concatenate all document IDs in the match
+//     Example: [Doc2:Pos1, Doc2:Pos5] → "2.0002.000"
+//
+//  2. Convert to JSON string
+//     Example: "2.0002.000" → "\"2.0002.000\""
+//
+//  3. Hash with MD5 to create a fixed-length unique ID
+//     Example: "\"2.0002.000\"" → "a1b2c3d4e5f6..."
+//
+// Why MD5?
+// - Fast to compute
+// - Fixed length (32 hex characters)
+// - Low collision probability for our use case
+// - Not for security, just for unique IDs
 func (m *Match) GetKey() (string, error) {
-	data, err := json.Marshal(m.DocID)
+	// Step 1: Build a string from all document IDs
+	docIDs := make([]string, len(m.Offsets))
+	for i, offset := range m.Offsets {
+		docIDs[i] = fmt.Sprintf("%v", offset.DocumentID)
+	}
+
+	combinedID := strings.Join(docIDs, "")
+
+	// Step 2: Convert to JSON (for consistent string representation)
+	data, err := json.Marshal(combinedID)
 	if err != nil {
 		return "", err
 	}
+
+	// Step 3: Hash to create a unique identifier
 	hash := md5.Sum(data)
 	return hex.EncodeToString(hash[:]), nil
-}
-
-// calculateIDF computes the Inverse Document Frequency for a term
-//
-// IDF FORMULA:
-// ------------
-// IDF(term) = log((N - df + 0.5) / (df + 0.5) + 1)
-//
-// Where:
-//
-//	N = total number of documents
-//	df = number of documents containing the term
-//
-// INTUITION:
-// ----------
-// - Rare terms (low df) get high IDF scores
-// - Common terms (high df) get low IDF scores
-// - This makes rare terms more important for ranking
-//
-// EXAMPLE:
-// --------
-// Total docs: 1000
-// Term "the": appears in 950 docs → IDF ≈ 0.05 (very common, low importance)
-// Term "quantum": appears in 5 docs → IDF ≈ 5.3 (rare, high importance)
-func (idx *InvertedIndex) calculateIDF(term string) float64 {
-	// Count documents containing this term
-	skipList, exists := idx.getPostingList(term)
-	if !exists {
-		return 0.0
-	}
-
-	// Count unique documents in the posting list
-	docFreq := idx.countDocsInPostingList(skipList)
-
-	if docFreq == 0 {
-		return 0.0
-	}
-
-	N := float64(idx.TotalDocs)
-	df := float64(docFreq)
-
-	// BM25 IDF formula (with smoothing to avoid negative values)
-	return math.Log((N-df+0.5)/(df+0.5) + 1.0)
-}
-
-// countDocsInPostingList counts unique documents in a posting list
-func (idx *InvertedIndex) countDocsInPostingList(skipList SkipList) int {
-	uniqueDocs := make(map[int]bool)
-
-	current := skipList.Head.Tower[0]
-	for current != nil {
-		docID := current.Key.GetDocumentID()
-		uniqueDocs[docID] = true
-		current = current.Tower[0]
-	}
-
-	return len(uniqueDocs)
-}
-
-// calculateBM25Score computes the BM25 score for a document given query terms
-//
-// BM25 ALGORITHM:
-// ---------------
-//  1. For each query term:
-//     a. Calculate IDF(term) - how rare is this term?
-//     b. Get term frequency in document
-//     c. Apply saturation and length normalization
-//     d. Accumulate score
-//
-// EXAMPLE CALCULATION:
-// --------------------
-// Query: "machine learning"
-// Doc 5: 200 words, "machine" appears 3 times, "learning" appears 2 times
-// Corpus: 1000 docs, avg length 150 words
-//
-// For "machine" (appears in 100 docs):
-//
-//	IDF = log((1000 - 100 + 0.5) / (100 + 0.5) + 1) ≈ 2.3
-//	TF = 3
-//	normalized_TF = (3 * 2.5) / (3 + 1.5 * (1 - 0.75 + 0.75 * (200/150)))
-//	              = 7.5 / 5.0 ≈ 1.5
-//	score += 2.3 * 1.5 ≈ 3.45
-//
-// For "learning" (appears in 50 docs):
-//
-//	IDF ≈ 2.9
-//	TF = 2
-//	normalized_TF ≈ 1.2
-//	score += 2.9 * 1.2 ≈ 3.48
-//
-// Total BM25 score: 3.45 + 3.48 = 6.93
-func (idx *InvertedIndex) calculateBM25Score(docID int, queryTerms []string) float64 {
-	docStats, exists := idx.DocStats[docID]
-	if !exists {
-		return 0.0
-	}
-
-	// Calculate average document length
-	avgDocLen := float64(idx.TotalTerms) / float64(idx.TotalDocs)
-	docLen := float64(docStats.Length)
-
-	score := 0.0
-	k1 := idx.BM25Params.K1
-	b := idx.BM25Params.B
-
-	// Process each query term
-	for _, term := range queryTerms {
-		// Get IDF for this term
-		idf := idx.calculateIDF(term)
-
-		// Get term frequency in this document
-		tf := float64(docStats.TermFreqs[term])
-
-		if tf > 0 {
-			// BM25 formula with length normalization
-			numerator := tf * (k1 + 1)
-			denominator := tf + k1*(1-b+b*(docLen/avgDocLen))
-			score += idf * (numerator / denominator)
-		}
-	}
-
-	return score
-}
-
-// RankBM25 performs BM25 ranking of search results
-//
-// ALGORITHM:
-// ----------
-// 1. Tokenize query
-// 2. Find all documents containing at least one query term
-// 3. Calculate BM25 score for each document
-// 4. Sort by score (descending)
-// 5. Return top K results
-//
-// EXAMPLE:
-// --------
-// Query: "machine learning algorithms"
-//
-// Step 1: Tokenize → ["machine", "learning", "algorithms"]
-//
-// Step 2: Find candidate documents:
-//
-//	"machine" appears in: [Doc1, Doc3, Doc5, Doc7]
-//	"learning" appears in: [Doc1, Doc2, Doc5]
-//	"algorithms" appears in: [Doc2, Doc5, Doc8]
-//	Candidates: [Doc1, Doc2, Doc3, Doc5, Doc7, Doc8]
-//
-// Step 3: Calculate BM25 scores:
-//
-//	Doc1: 12.5 (has "machine" and "learning")
-//	Doc2: 8.3 (has "learning" and "algorithms")
-//	Doc3: 3.2 (only has "machine")
-//	Doc5: 15.7 (has all three terms!)
-//	Doc7: 2.1 (only has "machine")
-//	Doc8: 4.5 (only has "algorithms")
-//
-// Step 4: Sort: [Doc5, Doc1, Doc2, Doc8, Doc3, Doc7]
-//
-// Step 5: Return top 3: [Doc5, Doc1, Doc2]
-func (idx *InvertedIndex) RankBM25(query string, maxResults int) []Match {
-	slog.Info("BM25 ranking", slog.String("query", query))
-
-	tokens := Analyze(query)
-	if len(tokens) == 0 {
-		return []Match{}
-	}
-
-	slog.Info("search tokens", slog.String("tokens", fmt.Sprintf("%v", tokens)))
-
-	// Find all candidate documents (documents containing at least one query term)
-	candidates := idx.findCandidateDocuments(tokens)
-
-	// Calculate BM25 score for each candidate
-	results := make([]Match, 0, len(candidates))
-	for docID := range candidates {
-		score := idx.calculateBM25Score(docID, tokens)
-
-		if score > 0 {
-			results = append(results, Match{
-				DocID:   docID,
-				Offsets: candidates[docID], // Positions where terms appear
-				Score:   score,
-			})
-		}
-	}
-
-	// Sort by score (descending)
-	idx.sortMatchesByScore(results)
-
-	// Return top K results
-	return limitResults(results, maxResults)
-}
-
-// findCandidateDocuments finds all documents containing at least one query term
-//
-// Returns a map: DocID → Positions where query terms appear
-func (idx *InvertedIndex) findCandidateDocuments(tokens []string) map[int][]Position {
-	candidates := make(map[int][]Position)
-
-	for _, token := range tokens {
-		skipList, exists := idx.getPostingList(token)
-		if !exists {
-			continue
-		}
-
-		// Traverse the posting list for this term
-		current := skipList.Head.Tower[0]
-		for current != nil {
-			docID := current.Key.GetDocumentID()
-			candidates[docID] = append(candidates[docID], current.Key)
-			current = current.Tower[0]
-		}
-	}
-
-	return candidates
-}
-
-// sortMatchesByScore sorts matches by score in descending order (higher scores first)
-func (idx *InvertedIndex) sortMatchesByScore(matches []Match) {
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].Score > matches[j].Score
-	})
 }
 
 // RankProximity performs proximity-based ranking of search results
