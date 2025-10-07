@@ -7,7 +7,7 @@
   </p>
 </div>
 
-A high-performance, full-text search engine in Go featuring an inverted index with skip lists, phrase search, BM25 and proximity ranking.
+A high-performance full-text search engine in Go with inverted indexing, boolean queries, phrase search, proximity queries, and BM25 ranking—powered by a flexible query engine, roaring bitmaps, and skip lists.
 
 ## Table of Contents
 
