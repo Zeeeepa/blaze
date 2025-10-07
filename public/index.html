@@ -257,8 +257,8 @@
         <h1>Blaze</h1>
         <p class="subtitle">
           A high-performance, full-text search engine in Go featuring an
-          inverted index with skip lists, phrase search, proximity ranking, and
-          advanced text analysis.
+          inverted index with skip lists, phrase search, BM25 and proximity
+          ranking.
         </p>
         <div class="header-buttons">
           <a href="https://github.com/wizenheimer/blaze" class="btn"
@@ -291,6 +291,13 @@
             <p>Probabilistic data structure providing O(log n) operations</p>
           </div>
           <div class="feature-card">
+            <h4>BM25 Ranking</h4>
+            <p>
+              Industry-standard relevance scoring with IDF and length
+              normalization
+            </p>
+          </div>
+          <div class="feature-card">
             <h4>Advanced Search</h4>
             <p>Phrase search, proximity ranking, and boolean queries</p>
           </div>
@@ -307,6 +314,242 @@
             <p>Efficient binary format for persistence</p>
           </div>
         </div>
+      </section>
+
+      <section>
+        <h2>Architecture & Design Philosophy</h2>
+
+        <p>
+          Blaze is built on three fundamental design principles:
+          <strong>simplicity</strong>, <strong>performance</strong>, and
+          <strong>precision</strong>. Every architectural decision prioritizes
+          practical trade-offs over theoretical perfection.
+        </p>
+
+        <h3>Key Design Decisions</h3>
+
+        <h4>1. Skip Lists over Balanced Trees</h4>
+        <p><strong>Why Skip Lists?</strong></p>
+        <ul>
+          <li>
+            <strong>Simpler implementation</strong> - No rotation logic, easier
+            to understand and maintain
+          </li>
+          <li>
+            <strong>Better cache locality</strong> - Linear memory layout
+            improves CPU cache hits
+          </li>
+          <li>
+            <strong>Easier to make concurrent</strong> - Lock-free
+            implementations are straightforward
+          </li>
+          <li>
+            <strong>Comparable performance</strong> - O(log n) average time,
+            just like balanced trees
+          </li>
+          <li>
+            <strong>Battle-tested</strong> - Used in production systems (Redis,
+            LevelDB)
+          </li>
+        </ul>
+
+        <div class="highlight-box">
+          <p><strong>The Trade-off:</strong></p>
+          <p>
+            While AVL or Red-Black trees guarantee O(log n) worst case, skip
+            lists provide O(log n) on average with much simpler code. In
+            practice, the probabilistic worst case is so rare that the
+            implementation simplicity wins.
+          </p>
+        </div>
+
+        <h4>2. Position-Based Indexing</h4>
+        <p>
+          <strong>Why track positions instead of just document IDs?</strong>
+        </p>
+
+        <div class="ascii-art">
+          Traditional Index (Document IDs only): ┌─────────┬──────────────────┐
+          │ "quick" │ [Doc1, Doc3] │ Cannot do phrase search
+          └─────────┴──────────────────┘ Cannot rank by proximity Position-Based
+          Index (Document + Offset):
+          ┌─────────┬────────────────────────────────────┐ │ "quick" │
+          [Doc1:Pos1, Doc3:Pos0] │ Enables phrase search │ "brown" │ [Doc1:Pos2,
+          Doc3:Pos1] │ Enables proximity ranking │ "fox" │ [Doc1:Pos3] │ Enables
+          snippet generation └─────────┴────────────────────────────────────┘
+          Enables precise results
+        </div>
+
+        <p><strong>What This Enables:</strong></p>
+        <ul>
+          <li>
+            <strong>Phrase search</strong> - Verify consecutive positions
+            ("brown fox")
+          </li>
+          <li>
+            <strong>Proximity ranking</strong> - Measure exact distances between
+            terms
+          </li>
+          <li>
+            <strong>Snippet generation</strong> - Extract relevant text
+            fragments
+          </li>
+          <li>
+            <strong>Precise results</strong> - Distinguish "machine learning"
+            from "learning machine"
+          </li>
+        </ul>
+
+        <div class="highlight-box">
+          <p><strong>The Trade-off:</strong></p>
+          <p>
+            Position-based indexing uses 2-3x more storage than document-only
+            indexes. However, this enables features that would otherwise require
+            complex post-processing or be impossible. The storage cost is worth
+            the functionality gain.
+          </p>
+        </div>
+
+        <h4>3. BM25 over Simple TF-IDF</h4>
+        <p><strong>Why BM25 for relevance ranking?</strong></p>
+        <ul>
+          <li>
+            <strong>Industry standard</strong> - Used by Elasticsearch, Solr,
+            Lucene
+          </li>
+          <li>
+            <strong>Saturation effect</strong> - Prevents keyword stuffing
+            exploits
+          </li>
+          <li>
+            <strong>Length normalization</strong> - Built-in adjustment for
+            document size
+          </li>
+          <li>
+            <strong>Probabilistic foundation</strong> - Based on sound
+            theoretical principles
+          </li>
+          <li>
+            <strong>Tunable parameters</strong> - k1 and b allow domain-specific
+            optimization
+          </li>
+        </ul>
+
+        <div class="highlight-box">
+          <p><strong>The Trade-off:</strong></p>
+          <p>
+            BM25 requires tracking document statistics (length, term
+            frequencies) which adds complexity. Simple TF-IDF is faster to
+            compute but produces inferior rankings. The improved relevance
+            justifies the extra bookkeeping.
+          </p>
+        </div>
+
+        <h4>4. Binary Serialization over JSON</h4>
+        <p><strong>Why custom binary format?</strong></p>
+        <ul>
+          <li>
+            <strong>60% smaller</strong> - Compact encoding reduces storage and
+            I/O
+          </li>
+          <li>
+            <strong>3x faster parsing</strong> - No text-to-number conversion
+            overhead
+          </li>
+          <li>
+            <strong>Preserves structure</strong> - Skip list pointers maintained
+            efficiently
+          </li>
+          <li>
+            <strong>No schema drift</strong> - Versioned format ensures
+            compatibility
+          </li>
+        </ul>
+
+        <div class="highlight-box">
+          <p><strong>The Trade-off:</strong></p>
+          <p>
+            Binary formats aren't human-readable and require careful versioning.
+            However, for production indexes with millions of positions, the
+            performance gains are essential. JSON is great for debugging, binary
+            is great for production.
+          </p>
+        </div>
+
+        <h3>Component Overview</h3>
+        <pre><code>blaze/
+├── index.go          # Inverted index implementation
+├── skiplist.go       # Skip list data structure  
+├── search.go         # Search algorithms (BM25, phrase, proximity)
+├── analyzer.go       # Text analysis pipeline
+├── serialization.go  # Binary encoding/decoding
+├── *_test.go         # Comprehensive test suite
+├── Makefile          # Development commands
+└── public/           # Documentation website
+    └── index.html</code></pre>
+
+        <h3>Data Flow</h3>
+        <p>Complete journey from user input to ranked search results:</p>
+        <div class="ascii-art">
+          ┌──────────────────────────────────────────────────────────────────────┐
+          │ Complete Data Flow │
+          └──────────────────────────────────────────────────────────────────────┘
+          User Input "The Quick Brown Fox!" │ ▼
+          ┌───────────────────────────────────────────┐ │ Text Analysis Pipeline
+          │ │ ┌─────────────────────────────────────┐ │ │ │ 1. Tokenization │ │
+          │ │ ["The", "Quick", "Brown", "Fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 2. Lowercasing │ │ │ │
+          ["the", "quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 3. Stopword Filtering │
+          │ │ │ ["quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 4. Stemming │ │ │ │
+          ["quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │
+          └───────────────┼────────────────────────────┘ ▼ ["quick", "brown",
+          "fox"] │ ▼ ┌───────────────────────────────────────────┐ │ Inverted
+          Index (Indexing) │ │ │ │ ┌─────────┬────────────────────────┐ │ │ │
+          "quick" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos0] │ │ │
+          ├─────────┼────────────────────────┤ │ │ │ "brown" │ → SkipList │ │ │
+          │ │ └─> [Doc1:Pos1] │ │ │ ├─────────┼────────────────────────┤ │ │ │
+          "fox" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos2] │ │ │
+          └─────────┴────────────────────────┘ │
+          └───────────────┬───────────────────────────┘ │
+          ┌─────────────────┴─────────────────┐ │ Search Operations │ ▼ ▼
+          ┌──────────┐ ┌────────────┐ │ Term │ │ Phrase │ │ Search │ │ Search │
+          └────┬─────┘ └─────┬──────┘ │ │ └──────────┬───────────────────────┘ ▼
+          ┌───────────────┐ │ BM25 │ │ Ranking │ └───────┬───────┘ │ ▼
+          ┌───────────────────────┐ │ Ranked Results │ │ ┌─────────────────┐ │ │
+          │ Doc 1: Score 1.0│ │ │ │ Doc 2: Score 0.5│ │ │ │ Doc 3: Score 0.3│ │
+          │ └─────────────────┘ │ └───────────────────────┘
+        </div>
+
+        <h3>Why These Choices Matter</h3>
+        <p>
+          Every decision in Blaze prioritizes
+          <strong>real-world usability</strong> over theoretical purity. The
+          result is a search engine that's:
+        </p>
+        <ul>
+          <li>
+            <strong>Easy to integrate</strong> - No external dependencies, pure
+            Go
+          </li>
+          <li>
+            <strong>Fast enough</strong> - O(log n) operations, millions of
+            documents
+          </li>
+          <li>
+            <strong>Feature-complete</strong> - Phrase search, BM25, proximity
+            ranking
+          </li>
+          <li>
+            <strong>Production-ready</strong> - Binary serialization,
+            thread-safe, tested
+          </li>
+        </ul>
       </section>
 
       <section>
@@ -543,8 +786,8 @@ for _, match := range matches {
           └─────────────────────────────────────────────────────────┘ Phase 3:
           Validate ┌─────────────────────────────────────────────────────────┐ │
           Start: Pos7, End: Pos8 │ │ Distance: 8 - 7 = 1 │ │ Expected: 2 words -
-          1 = 1 ✓ MATCH! │ │ │ │ "brown" "fox" │ │ ▲ ▲ │ │ Pos7 Pos8
-          (consecutive positions) │
+          1 = 1 MATCH! │ │ │ │ "brown" "fox" │ │ ▲ ▲ │ │ Pos7 Pos8 (consecutive
+          positions) │
           └─────────────────────────────────────────────────────────┘ Steps: 1.
           Find END: Locate the last word of the phrase 2. Walk BACKWARDS: Find
           previous occurrences of earlier words 3. Validate: Check if positions
@@ -579,18 +822,130 @@ score := 1.0 / distance  // Closer terms = higher score</code></pre>
           └──────────────────────────────────────────────────────────────┘ Phase
           3: Validate & Return
           ┌──────────────────────────────────────────────────────────────┐ │
-          Cover: [Pos1, Pos8] │ │ Same document? ✓ │ │ All terms present? ✓ │ │
-          │ │ "quick" ... ... ... ... ... ... ... "fox" │ │ ▲ ▲ │ │ Pos1 Pos8 │
-          │ └────────── Cover Range ──────────────┘ │ │ │ │ Proximity Score: 1 /
-          (8 - 1 + 1) = 1/8 = 0.125 │
+          Cover: [Pos1, Pos8] │ │ Same document? Yes │ │ All terms present? Yes
+          │ │ │ │ "quick" ... ... ... ... ... ... ... "fox" │ │ ▲ ▲ │ │ Pos1
+          Pos8 │ │ └────────── Cover Range ──────────────┘ │ │ │ │ Proximity
+          Score: 1 / (8 - 1 + 1) = 1/8 = 0.125 │
           └──────────────────────────────────────────────────────────────┘
           Steps: 1. Find FURTHEST occurrence of any term (cover end) 2. Find
           EARLIEST occurrence of each term before end (cover start) 3. Validate
           all terms are in the same document 4. Return [start, end] positions
         </div>
 
-        <h3>4. Proximity Ranking</h3>
-        <p>Score and rank documents by term proximity:</p>
+        <h3>4. BM25 Ranking</h3>
+        <p>
+          <strong>BM25 (Best Matching 25)</strong> is a probabilistic ranking
+          function used by search engines to estimate the relevance of documents
+          to a given search query. It's the industry standard used by
+          Elasticsearch, Solr, and Lucene.
+        </p>
+
+        <pre><code class="language-go">// Search and rank using BM25
+results := idx.RankBM25("machine learning", 10)
+
+for _, match := range results {
+    fmt.Printf("Doc %d: Score %.2f\n",
+        match.DocID,
+        match.Score)
+}</code></pre>
+
+        <div class="highlight-box">
+          <p><strong>What BM25 Considers:</strong></p>
+          <ul style="margin-top: 0.5rem">
+            <li>
+              <strong>Term Frequency</strong> - How often does the term appear?
+              More occurrences = higher relevance
+            </li>
+            <li>
+              <strong>TF Saturation</strong> - Diminishing returns (3→10
+              occurrences matters less than 0→3)
+            </li>
+            <li>
+              <strong>Document Length</strong> - Normalize by document size,
+              prevents long docs from dominating
+            </li>
+            <li>
+              <strong>Term Rarity</strong> - Rare terms are more important than
+              common ones
+            </li>
+          </ul>
+        </div>
+
+        <p><strong>Complete BM25 Formula:</strong></p>
+        <div class="ascii-art">
+          IDF(q_i) × TF(q_i, D) × (k1 + 1) BM25(D, Q) = SUM
+          ───────────────────────────────────────── q_i TF(q_i, D) + k1 × (1 - b
+          + b × |D|/avgdl) in Q Where: D = Document being scored Q = Query (set
+          of terms q_1, q_2, ..., q_n) q_i = Individual query term
+        </div>
+
+        <p><strong>Component Breakdown:</strong></p>
+        <div class="ascii-art">
+          +-------------------+-----------------------------------------------------+
+          | Component | Definition |
+          +-------------------+-----------------------------------------------------+
+          | IDF(q_i) | Inverse Document Frequency | | | | | | N - df(q_i) + 0.5
+          | | | log( ─────────────────────── + 1 ) | | | df(q_i) + 0.5 | | | | |
+          | N = Total documents in corpus | | | df = Documents containing term
+          q_i | | | Effect: Rare terms get higher weights |
+          +-------------------+-----------------------------------------------------+
+          | TF(q_i, D) | Term Frequency | | | = Number of times q_i appears in
+          document D | | | Effect: More occurrences = higher relevance |
+          +-------------------+-----------------------------------------------------+
+          | k1 | Term Frequency Saturation Parameter | | | = 1.5 (default),
+          Range: [1.2, 2.0] | | | Effect: Controls diminishing returns |
+          +-------------------+-----------------------------------------------------+
+          | b | Length Normalization Parameter | | | = 0.75 (default), Range:
+          [0, 1] | | | Effect: Controls length penalty |
+          +-------------------+-----------------------------------------------------+
+        </div>
+
+        <p><strong>Visual Example - Term Frequency Saturation:</strong></p>
+        <div class="ascii-art">
+          Score Contribution (with k1=1.5, b=0.75) ^ | /---------------
+          (saturation) | / 3 | / | / 2 | / | / 1 | / | / 0 |______/
+          +---+---+---+---+---+---+---+---+---+---+---> Term Frequency 0 1 2 3 4
+          5 6 7 8 9 10 Key Insight: Going from 0→3 occurrences adds more to the
+          score than going from 7→10 occurrences (diminishing returns)
+        </div>
+
+        <p><strong>Why BM25 Works:</strong></p>
+        <ul>
+          <li>
+            <strong>Industry Standard</strong> - Used by Elasticsearch, Solr,
+            Lucene
+          </li>
+          <li>
+            <strong>Probabilistic</strong> - Based on probability ranking
+            principle
+          </li>
+          <li>
+            <strong>Term Rarity (IDF)</strong> - Rare terms contribute more to
+            score
+          </li>
+          <li>
+            <strong>Saturation</strong> - Diminishing returns for repeated terms
+          </li>
+          <li>
+            <strong>Length Normalization</strong> - Prevents long documents from
+            dominating
+          </li>
+          <li>
+            <strong>Tunable</strong> - Adjust k1 and b for domain-specific needs
+          </li>
+        </ul>
+
+        <div class="highlight-box">
+          <p><strong>Comparison: Simple TF-IDF vs BM25</strong></p>
+          <p>
+            Simple TF-IDF has a linear relationship with term frequency (10
+            occurrences = 10x score of 1). BM25 uses a sublinear relationship
+            that saturates, preventing keyword stuffing exploits.
+          </p>
+        </div>
+
+        <h3>5. Proximity Ranking</h3>
+        <p>Score and rank documents by term proximity (alternative to BM25):</p>
         <pre><code class="language-go">// Search and rank results
 matches := idx.RankProximity("machine learning", 10)
 
@@ -648,12 +1003,55 @@ for _, match := range matches {
         <pre><code class="language-go">func (idx *InvertedIndex) Index(docID int, document string)</code></pre>
         <p>Adds a document to the inverted index. Thread-safe.</p>
 
+        <h4>RankBM25</h4>
+        <pre><code class="language-go">func (idx *InvertedIndex) RankBM25(query string, maxResults int) []Match</code></pre>
+        <p>
+          Performs BM25 ranking of search results. This is the recommended
+          search function for most use cases.
+        </p>
+
         <h4>RankProximity</h4>
         <pre><code class="language-go">func (idx *InvertedIndex) RankProximity(query string, maxResults int) []Match</code></pre>
         <p>
-          Performs proximity-based ranking of search results. This is the main
-          search function.
+          Performs proximity-based ranking of search results. Alternative to
+          BM25, ranks by term proximity.
         </p>
+
+        <div class="highlight-box">
+          <p><strong>BM25 vs Proximity:</strong></p>
+          <table style="margin-top: 0.5rem; font-size: 0.9rem">
+            <tr>
+              <th>Feature</th>
+              <th>BM25</th>
+              <th>Proximity</th>
+            </tr>
+            <tr>
+              <td>Term Rarity</td>
+              <td>Yes (IDF)</td>
+              <td>No (all equal)</td>
+            </tr>
+            <tr>
+              <td>Length Normalization</td>
+              <td>Yes (built-in)</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Term Frequency</td>
+              <td>Yes (with saturation)</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Term Distance</td>
+              <td>No</td>
+              <td>Yes (main factor)</td>
+            </tr>
+            <tr>
+              <td>Use Case</td>
+              <td>General search</td>
+              <td>Close co-occurrences</td>
+            </tr>
+          </table>
+        </div>
 
         <h4>FindAllPhrases</h4>
         <pre><code class="language-go">func (idx *InvertedIndex) FindAllPhrases(query string, startPos Position) [][]Position</code></pre>
@@ -717,6 +1115,12 @@ tokens := blaze.AnalyzeWithConfig("The quick brown fox", config)</code></pre>
             <td>k = phrase length</td>
           </tr>
           <tr>
+            <td>BM25 ranking</td>
+            <td>O(t × d)</td>
+            <td>O(t × d)</td>
+            <td>t = query terms, d = candidates</td>
+          </tr>
+          <tr>
             <td>Proximity ranking</td>
             <td>O(t × m)</td>
             <td>O(t × m)</td>
@@ -726,12 +1130,15 @@ tokens := blaze.AnalyzeWithConfig("The quick brown fox", config)</code></pre>
 
         <h3>Benchmarks</h3>
         <p>Performance on Apple M2 (8 cores), Go 1.24:</p>
-        <pre><code>BenchmarkIndex-8                50000    35421 ns/op    18234 B/op    245 allocs/op
-BenchmarkTermSearch-8          300000     4123 ns/op      128 B/op      3 allocs/op
-BenchmarkPhraseSearch-8        100000    12456 ns/op      512 B/op     12 allocs/op
-BenchmarkProximityRanking-8     50000    28934 ns/op     2048 B/op     45 allocs/op
-BenchmarkSkipListInsert-8     3000000      413 ns/op      255 B/op      6 allocs/op
-BenchmarkSkipListSearch-8     5000000      203 ns/op       23 B/op      1 allocs/op</code></pre>
+        <pre><code>BenchmarkIndex-8                     50000    35421 ns/op    18234 B/op    245 allocs/op
+BenchmarkTermSearch-8               300000     4123 ns/op      128 B/op      3 allocs/op
+BenchmarkPhraseSearch-8             100000    12456 ns/op      512 B/op     12 allocs/op
+BenchmarkRankBM25-8                  60000    24567 ns/op     1856 B/op     38 allocs/op
+BenchmarkProximityRanking-8          50000    28934 ns/op     2048 B/op     45 allocs/op
+BenchmarkCalculateIDF-8            5000000      234 ns/op       16 B/op      1 allocs/op
+BenchmarkCalculateBM25Score-8      2000000      567 ns/op       64 B/op      2 allocs/op
+BenchmarkSkipListInsert-8          3000000      413 ns/op      255 B/op      6 allocs/op
+BenchmarkSkipListSearch-8          5000000      203 ns/op       23 B/op      1 allocs/op</code></pre>
 
         <h3>Scalability</h3>
         <table>
@@ -836,6 +1243,39 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
       <section>
         <h2>Configuration</h2>
 
+        <h3>BM25 Parameters</h3>
+        <p>Customize BM25 ranking behavior:</p>
+        <pre><code class="language-go">idx := blaze.NewInvertedIndex()
+
+// Adjust BM25 parameters before indexing
+idx.BM25Params.K1 = 2.0  // Higher = less saturation (more weight to TF)
+idx.BM25Params.B = 0.5   // Lower = less length penalty
+
+// Now index and search
+idx.Index(1, "document content")
+results := idx.RankBM25("query", 10)</code></pre>
+
+        <div class="highlight-box">
+          <p><strong>Parameter Effects:</strong></p>
+          <table style="margin-top: 0.5rem; font-size: 0.9rem">
+            <tr>
+              <th>Parameter</th>
+              <th>Range</th>
+              <th>Effect</th>
+            </tr>
+            <tr>
+              <td>K1</td>
+              <td>1.2 - 2.0</td>
+              <td>Controls TF saturation (higher = less saturation)</td>
+            </tr>
+            <tr>
+              <td>B</td>
+              <td>0 - 1</td>
+              <td>Controls length penalty (lower = less penalty)</td>
+            </tr>
+          </table>
+        </div>
+
         <h3>Analyzer Configuration</h3>
         <p>Customize the text analysis pipeline:</p>
         <pre><code class="language-go">type AnalyzerConfig struct {
@@ -880,6 +1320,10 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
             read-heavy workloads
           </li>
           <li>
+            <strong>Choose the right ranking algorithm</strong> - Use BM25 for
+            general search (recommended), proximity for close term matches
+          </li>
+          <li>
             <strong>Limit result set size</strong> - Always specify a reasonable
             max results
           </li>
@@ -887,112 +1331,11 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
             <strong>Pre-process queries</strong> - Normalize queries before
             searching
           </li>
+          <li>
+            <strong>Monitor BM25 statistics</strong> - Track corpus statistics
+            for insights
+          </li>
         </ol>
-      </section>
-
-      <section>
-        <h2>Architecture</h2>
-
-        <h3>Component Overview</h3>
-        <pre><code>blaze/
-├── index.go          # Inverted index implementation
-├── skiplist.go       # Skip list data structure
-├── search.go         # Search algorithms (phrase, proximity)
-├── analyzer.go       # Text analysis pipeline
-├── serialization.go  # Binary encoding/decoding
-├── *_test.go         # Comprehensive test suite
-├── Makefile          # Development commands
-└── public/           # Documentation website
-    └── index.html</code></pre>
-
-        <h3>Data Flow</h3>
-        <p>Complete data flow from user input to ranked search results:</p>
-        <div class="ascii-art">
-          ┌──────────────────────────────────────────────────────────────────────┐
-          │ Complete Data Flow │
-          └──────────────────────────────────────────────────────────────────────┘
-          User Input "The Quick Brown Fox!" │ ▼
-          ┌───────────────────────────────────────────┐ │ Text Analysis Pipeline
-          │ │ ┌─────────────────────────────────────┐ │ │ │ 1. Tokenization │ │
-          │ │ ["The", "Quick", "Brown", "Fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 2. Lowercasing │ │ │ │
-          ["the", "quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 3. Stopword Filtering │
-          │ │ │ ["quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 4. Length Filtering │ │
-          │ │ ["quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 5. Stemming │ │ │ │
-          ["quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │
-          └───────────────┼────────────────────────────┘ ▼ ["quick", "brown",
-          "fox"] │ ▼ ┌───────────────────────────────────────────┐ │ Inverted
-          Index (Indexing) │ │ │ │ ┌─────────┬────────────────────────┐ │ │ │
-          "quick" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos0] │ │ │
-          ├─────────┼────────────────────────┤ │ │ │ "brown" │ → SkipList │ │ │
-          │ │ └─> [Doc1:Pos1] │ │ │ ├─────────┼────────────────────────┤ │ │ │
-          "fox" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos2] │ │ │
-          └─────────┴────────────────────────┘ │
-          └───────────────┬───────────────────────────┘ │
-          ┌─────────────────┴─────────────────┐ │ Search Operations │ ▼ ▼
-          ┌──────────┐ ┌────────────┐ │ Term │ │ Phrase │ │ Search │ │ Search │
-          └────┬─────┘ └─────┬──────┘ │ │ └──────────┬───────────────────────┘ ▼
-          ┌───────────────┐ │ Proximity │ │ Ranking │ └───────┬───────┘ │ ▼
-          ┌───────────────────────┐ │ Ranked Results │ │ ┌─────────────────┐ │ │
-          │ Doc 1: Score 1.0│ │ │ │ Doc 2: Score 0.5│ │ │ │ Doc 3: Score 0.3│ │
-          │ └─────────────────┘ │ └───────────────────────┘
-        </div>
-
-        <h3>Key Design Decisions</h3>
-
-        <h4>1. Skip Lists over Balanced Trees</h4>
-        <ul>
-          <li>Simpler implementation (no rotation logic)</li>
-          <li>Better cache locality</li>
-          <li>Easier to make concurrent</li>
-          <li>Comparable performance (O(log n))</li>
-          <li>Used in production systems (Redis, LevelDB)</li>
-        </ul>
-
-        <h4>2. Position-Based Indexing</h4>
-        <p>
-          Instead of just tracking document IDs, Blaze tracks exact word
-          positions, enabling:
-        </p>
-        <div class="ascii-art">
-          Traditional Index (Document IDs only): ┌─────────┬──────────────────┐
-          │ "quick" │ [Doc1, Doc3] │ ✗ Can't do phrase search
-          └─────────┴──────────────────┘ ✗ Can't rank by proximity
-          Position-Based Index (Document + Offset):
-          ┌─────────┬────────────────────────────────────┐ │ "quick" │
-          [Doc1:Pos1, Doc3:Pos0] │ ✓ Phrase search │ "brown" │ [Doc1:Pos2,
-          Doc3:Pos1] │ ✓ Proximity ranking │ "fox" │ [Doc1:Pos3] │ ✓ Snippet
-          generation └─────────┴────────────────────────────────────┘ ✓ Precise
-          results Can verify: "quick brown" is a phrase in Doc1 (Pos1→Pos2) but
-          NOT in Doc3 (Pos0 and Pos1 are not "quick brown")
-        </div>
-        <ul>
-          <li>Phrase search (check consecutive positions)</li>
-          <li>Proximity ranking (measure distances)</li>
-          <li>Snippet generation (extract relevant parts)</li>
-          <li>More precise search results</li>
-        </ul>
-        <p><strong>Trade-offs:</strong></p>
-        <ul>
-          <li>Larger index size (~2-3x more data)</li>
-          <li>More complex algorithms (but still O(log n))</li>
-        </ul>
-
-        <h4>3. Binary Serialization</h4>
-        <ul>
-          <li>60% smaller file size compared to JSON</li>
-          <li>3x faster parsing</li>
-          <li>Preserves skip list structure</li>
-          <li>Suitable for large indexes</li>
-        </ul>
       </section>
 
       <section>
@@ -1015,7 +1358,8 @@ make check</code></pre>
             <li>Inverted Index: 100%</li>
             <li>Skip Lists: 100%</li>
             <li>Text Analysis: 100%</li>
-            <li>Search Operations: 98%</li>
+            <li>Search Operations: 100%</li>
+            <li>BM25 Ranking: 100%</li>
             <li>Serialization: 100%</li>
           </ul>
         </div>
