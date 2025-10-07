@@ -104,63 +104,11 @@
       h4 {
         font-size: 1.25rem;
         margin: 1.5rem 0 0.75rem;
+        font-weight: 600;
       }
 
       p {
-        margin: 1rem 0;
-        line-height: 1.7;
-      }
-
-      ul,
-      ol {
-        margin: 1rem 0 1rem 2rem;
-        line-height: 1.7;
-      }
-
-      li {
-        margin: 0.5rem 0;
-      }
-
-      pre {
-        background: var(--code-bg);
-        padding: 1.5rem;
-        overflow-x: auto;
-        border-radius: 6px;
-        margin: 1.5rem 0;
-        border: 1px solid var(--border-color);
-      }
-
-      code {
-        background: #f0f0f0;
-        padding: 0.2rem 0.4rem;
-        border-radius: 3px;
-        font-family: "Monaco", "Consolas", "Courier New", monospace;
-        font-size: 0.9em;
-      }
-
-      pre code {
-        background: transparent;
-        padding: 0;
-        font-size: 0.85rem;
-        line-height: 1.5;
-      }
-
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 1.5rem 0;
-      }
-
-      th,
-      td {
-        border: 1px solid var(--border-color);
-        padding: 0.75rem;
-        text-align: left;
-      }
-
-      th {
-        background: var(--code-bg);
-        font-weight: 600;
+        margin-bottom: 1rem;
       }
 
       .features {
@@ -173,29 +121,84 @@
       .feature-card {
         padding: 1.5rem;
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: 4px;
       }
 
       .feature-card h4 {
         margin-top: 0;
+        margin-bottom: 0.5rem;
+      }
+
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 1.5rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      code {
+        font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+          "Courier New", monospace;
+        font-size: 0.9em;
+        background: var(--code-bg);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+      }
+
+      pre code {
+        background: none;
+        padding: 0;
       }
 
       .ascii-art {
-        background: white;
-        border: 1px solid var(--border-color);
-        padding: 1rem;
-        font-family: monospace;
-        font-size: 0.75rem;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 0.85rem;
         line-height: 1.3;
-        overflow-x: auto;
         white-space: pre;
+        background: var(--code-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 1.5rem;
+        overflow-x: auto;
+        margin: 1rem 0;
       }
 
-      .highlight-box {
-        background: #f8f9fa;
-        border-left: 4px solid var(--accent);
-        padding: 1rem 1.5rem;
-        margin: 1.5rem 0;
+      ul {
+        margin-left: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      li {
+        margin-bottom: 0.5rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+
+      th,
+      td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      th {
+        font-weight: 600;
+        background: var(--code-bg);
+      }
+
+      .note {
+        background: #f0f7ff;
+        border-left: 4px solid #0066cc;
+        padding: 1rem;
+        margin: 1rem 0;
       }
 
       footer {
@@ -204,31 +207,6 @@
         border-top: 1px solid var(--border-color);
         text-align: center;
         color: #666;
-      }
-
-      /* Prism theme overrides */
-      code[class*="language-"],
-      pre[class*="language-"] {
-        color: #383a42;
-        text-shadow: none;
-      }
-
-      .token.comment {
-        color: #a0a1a7;
-        font-style: italic;
-      }
-
-      .token.function,
-      .token.keyword {
-        color: #a626a4;
-      }
-
-      .token.string {
-        color: #50a14f;
-      }
-
-      .token.number {
-        color: #986801;
       }
 
       @media (max-width: 768px) {
@@ -257,8 +235,8 @@
         <h1>Blaze</h1>
         <p class="subtitle">
           A high-performance, full-text search engine in Go featuring an
-          inverted index with skip lists, phrase search, BM25 and proximity
-          ranking.
+          inverted index with skip lists, roaring bitmaps, BM25 ranking, and
+          type-safe query builder.
         </p>
         <div class="header-buttons">
           <a href="https://github.com/wizenheimer/blaze" class="btn"
@@ -291,6 +269,12 @@
             <p>Probabilistic data structure providing O(log n) operations</p>
           </div>
           <div class="feature-card">
+            <h4>Query Builder</h4>
+            <p>
+              Type-safe, fluent API for boolean queries with roaring bitmaps
+            </p>
+          </div>
+          <div class="feature-card">
             <h4>BM25 Ranking</h4>
             <p>
               Industry-standard relevance scoring with IDF and length
@@ -298,258 +282,16 @@
             </p>
           </div>
           <div class="feature-card">
-            <h4>Advanced Search</h4>
-            <p>Phrase search, proximity ranking, and boolean queries</p>
-          </div>
-          <div class="feature-card">
             <h4>Text Analysis</h4>
-            <p>Tokenization, stemming, stopword filtering, and normalization</p>
+            <p>
+              Tokenization, stemming, stopword filtering, case normalization
+            </p>
           </div>
           <div class="feature-card">
-            <h4>Thread-Safe</h4>
-            <p>Concurrent indexing with mutex protection</p>
-          </div>
-          <div class="feature-card">
-            <h4>Serialization</h4>
-            <p>Efficient binary format for persistence</p>
+            <h4>Hybrid Storage</h4>
+            <p>Roaring bitmaps for speed + skip lists for precision</p>
           </div>
         </div>
-      </section>
-
-      <section>
-        <h2>Architecture & Design Philosophy</h2>
-
-        <p>
-          Blaze is built on three fundamental design principles:
-          <strong>simplicity</strong>, <strong>performance</strong>, and
-          <strong>precision</strong>. Every architectural decision prioritizes
-          practical trade-offs over theoretical perfection.
-        </p>
-
-        <h3>Key Design Decisions</h3>
-
-        <h4>1. Skip Lists over Balanced Trees</h4>
-        <p><strong>Why Skip Lists?</strong></p>
-        <ul>
-          <li>
-            <strong>Simpler implementation</strong> - No rotation logic, easier
-            to understand and maintain
-          </li>
-          <li>
-            <strong>Better cache locality</strong> - Linear memory layout
-            improves CPU cache hits
-          </li>
-          <li>
-            <strong>Easier to make concurrent</strong> - Lock-free
-            implementations are straightforward
-          </li>
-          <li>
-            <strong>Comparable performance</strong> - O(log n) average time,
-            just like balanced trees
-          </li>
-          <li>
-            <strong>Battle-tested</strong> - Used in production systems (Redis,
-            LevelDB)
-          </li>
-        </ul>
-
-        <div class="highlight-box">
-          <p><strong>The Trade-off:</strong></p>
-          <p>
-            While AVL or Red-Black trees guarantee O(log n) worst case, skip
-            lists provide O(log n) on average with much simpler code. In
-            practice, the probabilistic worst case is so rare that the
-            implementation simplicity wins.
-          </p>
-        </div>
-
-        <h4>2. Position-Based Indexing</h4>
-        <p>
-          <strong>Why track positions instead of just document IDs?</strong>
-        </p>
-
-        <div class="ascii-art">
-          Traditional Index (Document IDs only): ┌─────────┬──────────────────┐
-          │ "quick" │ [Doc1, Doc3] │ Cannot do phrase search
-          └─────────┴──────────────────┘ Cannot rank by proximity Position-Based
-          Index (Document + Offset):
-          ┌─────────┬────────────────────────────────────┐ │ "quick" │
-          [Doc1:Pos1, Doc3:Pos0] │ Enables phrase search │ "brown" │ [Doc1:Pos2,
-          Doc3:Pos1] │ Enables proximity ranking │ "fox" │ [Doc1:Pos3] │ Enables
-          snippet generation └─────────┴────────────────────────────────────┘
-          Enables precise results
-        </div>
-
-        <p><strong>What This Enables:</strong></p>
-        <ul>
-          <li>
-            <strong>Phrase search</strong> - Verify consecutive positions
-            ("brown fox")
-          </li>
-          <li>
-            <strong>Proximity ranking</strong> - Measure exact distances between
-            terms
-          </li>
-          <li>
-            <strong>Snippet generation</strong> - Extract relevant text
-            fragments
-          </li>
-          <li>
-            <strong>Precise results</strong> - Distinguish "machine learning"
-            from "learning machine"
-          </li>
-        </ul>
-
-        <div class="highlight-box">
-          <p><strong>The Trade-off:</strong></p>
-          <p>
-            Position-based indexing uses 2-3x more storage than document-only
-            indexes. However, this enables features that would otherwise require
-            complex post-processing or be impossible. The storage cost is worth
-            the functionality gain.
-          </p>
-        </div>
-
-        <h4>3. BM25 over Simple TF-IDF</h4>
-        <p><strong>Why BM25 for relevance ranking?</strong></p>
-        <ul>
-          <li>
-            <strong>Industry standard</strong> - Used by Elasticsearch, Solr,
-            Lucene
-          </li>
-          <li>
-            <strong>Saturation effect</strong> - Prevents keyword stuffing
-            exploits
-          </li>
-          <li>
-            <strong>Length normalization</strong> - Built-in adjustment for
-            document size
-          </li>
-          <li>
-            <strong>Probabilistic foundation</strong> - Based on sound
-            theoretical principles
-          </li>
-          <li>
-            <strong>Tunable parameters</strong> - k1 and b allow domain-specific
-            optimization
-          </li>
-        </ul>
-
-        <div class="highlight-box">
-          <p><strong>The Trade-off:</strong></p>
-          <p>
-            BM25 requires tracking document statistics (length, term
-            frequencies) which adds complexity. Simple TF-IDF is faster to
-            compute but produces inferior rankings. The improved relevance
-            justifies the extra bookkeeping.
-          </p>
-        </div>
-
-        <h4>4. Binary Serialization over JSON</h4>
-        <p><strong>Why custom binary format?</strong></p>
-        <ul>
-          <li>
-            <strong>60% smaller</strong> - Compact encoding reduces storage and
-            I/O
-          </li>
-          <li>
-            <strong>3x faster parsing</strong> - No text-to-number conversion
-            overhead
-          </li>
-          <li>
-            <strong>Preserves structure</strong> - Skip list pointers maintained
-            efficiently
-          </li>
-          <li>
-            <strong>No schema drift</strong> - Versioned format ensures
-            compatibility
-          </li>
-        </ul>
-
-        <div class="highlight-box">
-          <p><strong>The Trade-off:</strong></p>
-          <p>
-            Binary formats aren't human-readable and require careful versioning.
-            However, for production indexes with millions of positions, the
-            performance gains are essential. JSON is great for debugging, binary
-            is great for production.
-          </p>
-        </div>
-
-        <h3>Component Overview</h3>
-        <pre><code>blaze/
-├── index.go          # Inverted index implementation
-├── skiplist.go       # Skip list data structure  
-├── search.go         # Search algorithms (BM25, phrase, proximity)
-├── analyzer.go       # Text analysis pipeline
-├── serialization.go  # Binary encoding/decoding
-├── *_test.go         # Comprehensive test suite
-├── Makefile          # Development commands
-└── public/           # Documentation website
-    └── index.html</code></pre>
-
-        <h3>Data Flow</h3>
-        <p>Complete journey from user input to ranked search results:</p>
-        <div class="ascii-art">
-          ┌──────────────────────────────────────────────────────────────────────┐
-          │ Complete Data Flow │
-          └──────────────────────────────────────────────────────────────────────┘
-          User Input "The Quick Brown Fox!" │ ▼
-          ┌───────────────────────────────────────────┐ │ Text Analysis Pipeline
-          │ │ ┌─────────────────────────────────────┐ │ │ │ 1. Tokenization │ │
-          │ │ ["The", "Quick", "Brown", "Fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 2. Lowercasing │ │ │ │
-          ["the", "quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 3. Stopword Filtering │
-          │ │ │ ["quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │ │ ▼ │ │
-          ┌─────────────────────────────────────┐ │ │ │ 4. Stemming │ │ │ │
-          ["quick", "brown", "fox"] │ │ │
-          └────────────┬────────────────────────┘ │
-          └───────────────┼────────────────────────────┘ ▼ ["quick", "brown",
-          "fox"] │ ▼ ┌───────────────────────────────────────────┐ │ Inverted
-          Index (Indexing) │ │ │ │ ┌─────────┬────────────────────────┐ │ │ │
-          "quick" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos0] │ │ │
-          ├─────────┼────────────────────────┤ │ │ │ "brown" │ → SkipList │ │ │
-          │ │ └─> [Doc1:Pos1] │ │ │ ├─────────┼────────────────────────┤ │ │ │
-          "fox" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos2] │ │ │
-          └─────────┴────────────────────────┘ │
-          └───────────────┬───────────────────────────┘ │
-          ┌─────────────────┴─────────────────┐ │ Search Operations │ ▼ ▼
-          ┌──────────┐ ┌────────────┐ │ Term │ │ Phrase │ │ Search │ │ Search │
-          └────┬─────┘ └─────┬──────┘ │ │ └──────────┬───────────────────────┘ ▼
-          ┌───────────────┐ │ BM25 │ │ Ranking │ └───────┬───────┘ │ ▼
-          ┌───────────────────────┐ │ Ranked Results │ │ ┌─────────────────┐ │ │
-          │ Doc 1: Score 1.0│ │ │ │ Doc 2: Score 0.5│ │ │ │ Doc 3: Score 0.3│ │
-          │ └─────────────────┘ │ └───────────────────────┘
-        </div>
-
-        <h3>Why These Choices Matter</h3>
-        <p>
-          Every decision in Blaze prioritizes
-          <strong>real-world usability</strong> over theoretical purity. The
-          result is a search engine that's:
-        </p>
-        <ul>
-          <li>
-            <strong>Easy to integrate</strong> - No external dependencies, pure
-            Go
-          </li>
-          <li>
-            <strong>Fast enough</strong> - O(log n) operations, millions of
-            documents
-          </li>
-          <li>
-            <strong>Feature-complete</strong> - Phrase search, BM25, proximity
-            ranking
-          </li>
-          <li>
-            <strong>Production-ready</strong> - Binary serialization,
-            thread-safe, tested
-          </li>
-        </ul>
       </section>
 
       <section>
@@ -575,137 +317,479 @@ func main() {
     idx.Index(2, "A quick brown dog runs fast")
     idx.Index(3, "The lazy cat sleeps all day")
 
-    // Search for documents containing "quick" and "brown"
-    matches := idx.RankProximity("quick brown", 10)
+    // Search with BM25 ranking
+    matches := idx.RankBM25("quick brown", 10)
 
     // Print results
     for _, match := range matches {
-        fmt.Printf("Document %d (score: %.2f)\n",
-            int(match.Offsets[0].DocumentID),
-            match.Score)
+        fmt.Printf("Document %d (score: %.2f)\n", match.DocID, match.Score)
     }
 }</code></pre>
-
-        <p><strong>Output:</strong></p>
-        <pre><code>Document 2 (score: 1.00)
-Document 1 (score: 0.50)</code></pre>
       </section>
 
       <section>
-        <h2>Core Concepts</h2>
-
-        <h3>Inverted Index</h3>
+        <h2>Query Builder API</h2>
         <p>
-          An inverted index is like the index at the back of a book. Instead of
-          scanning every document to find a word, the index tells you exactly
-          where each word appears.
+          The Query Builder provides a type-safe, fluent API for constructing
+          complex boolean queries with roaring bitmaps. No string parsing, no
+          syntax errors - just clean, composable code.
         </p>
 
-        <div class="highlight-box">
-          <p><strong>Example Documents:</strong></p>
-          <code>
-            Doc 1: "the quick brown fox"<br />
-            Doc 2: "the lazy dog"<br />
-            Doc 3: "quick brown dogs"
-          </code>
-        </div>
+        <h3>Basic Queries</h3>
 
-        <div class="ascii-art">
-          ┌─────────┬────────────────────────────────────┐ │ Token │ Posting
-          List │ ├─────────┼────────────────────────────────────┤ │ "quick" │ →
-          [Doc1:Pos1] → [Doc3:Pos0] │ │ "brown" │ → [Doc1:Pos2] → [Doc3:Pos1] │
-          │ "fox" │ → [Doc1:Pos3] │ │ "lazy" │ → [Doc2:Pos1] │ │ "dog" │ →
-          [Doc2:Pos2] │ │ "dogs" │ → [Doc3:Pos2] │
-          └─────────┴────────────────────────────────────┘
-        </div>
+        <h4>Single Term</h4>
+        <pre><code class="language-go">// Find all documents containing "machine"
+results := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    Execute()</code></pre>
 
-        <p><strong>Visual Representation:</strong></p>
-        <div class="ascii-art">
-          Inverted Index ┌──────────┐ │ Map │ │ [string] │ │ SkipList │
-          └────┬─────┘ │ ┌────────────────┼────────────────┐ │ │ │ ▼ ▼ ▼ "quick"
-          "brown" "fox" SkipList SkipList SkipList ┌──────┐ ┌──────┐ ┌──────┐ │
-          HEAD │ │ HEAD │ │ HEAD │ └──┬───┘ └──┬───┘ └──┬───┘ │ │ │ ▼ ▼ ▼
-          ┌──────┐ ┌──────┐ ┌──────┐ │Doc1:1│ │Doc1:2│ │Doc1:3│ └──┬───┘
-          └──┬───┘ └──────┘ │ │ ▼ ▼ ┌──────┐ ┌──────┐ │Doc3:0│ │Doc3:1│ └──────┘
-          └──────┘
-        </div>
+        <h4>AND Query</h4>
+        <pre><code class="language-go">// Find documents with BOTH "machine" AND "learning"
+results := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    And().
+    Term("learning").
+    Execute()</code></pre>
 
-        <p><strong>Benefits:</strong></p>
-        <ul>
-          <li>Instant term lookups (no document scanning)</li>
-          <li>Phrase search via position checking</li>
-          <li>Proximity ranking by measuring distances</li>
-          <li>Efficient boolean queries (AND, OR, NOT)</li>
-        </ul>
+        <h4>OR Query</h4>
+        <pre><code class="language-go">// Find documents with "python" OR "javascript"
+results := blaze.NewQueryBuilder(idx).
+    Term("python").
+    Or().
+    Term("javascript").
+    Execute()</code></pre>
 
-        <h3>Skip Lists</h3>
+        <h4>NOT Query</h4>
+        <pre><code class="language-go">// Find documents with "python" but NOT "snake"
+results := blaze.NewQueryBuilder(idx).
+    Term("python").
+    And().Not().
+    Term("snake").
+    Execute()</code></pre>
+
+        <h4>Complex Grouped Query</h4>
+        <pre><code class="language-go">// (machine OR deep) AND learning
+results := blaze.NewQueryBuilder(idx).
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("machine").Or().Term("deep")
+    }).
+    And().
+    Term("learning").
+    Execute()</code></pre>
+
+        <h4>BM25 Ranked Results</h4>
+        <pre><code class="language-go">// Get top 10 results ranked by relevance
+matches := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    And().
+    Term("learning").
+    ExecuteWithBM25(10)
+
+for _, match := range matches {
+    fmt.Printf("Doc %d: score=%.2f\n", match.DocID, match.Score)
+}</code></pre>
+
+        <h3>Convenience Functions</h3>
+        <pre><code class="language-go">// AllOf: Documents containing ALL terms (AND operation)
+results := blaze.AllOf(idx, "machine", "learning", "python")
+
+// AnyOf: Documents containing ANY term (OR operation)
+results := blaze.AnyOf(idx, "cat", "dog", "bird")
+
+// TermExcluding: Term with exclusion (AND NOT operation)
+results := blaze.TermExcluding(idx, "python", "snake")</code></pre>
+      </section>
+
+      <section>
+        <h2>Architecture</h2>
+
+        <h3>Query Processor Architecture</h3>
         <p>
-          A skip list is a probabilistic data structure that maintains sorted
-          data with O(log n) average time complexity for search, insertion, and
-          deletion.
+          The query processor uses a hybrid storage approach combining roaring
+          bitmaps for document-level operations and skip lists for
+          position-level operations.
         </p>
 
         <div class="ascii-art">
-          Skip List with Multiple Levels (Express Lanes)
-          ═══════════════════════════════════════════════════════════════ Level
-          3: HEAD ────────────────────────────────────────> [30] ──────> NULL ↓
-          ↓ Level 2: HEAD ───────────────────> [15] ─────────────> [30] ──────>
-          NULL ↓ ↓ ↓ Level 1: HEAD ──────> [10] ──────> [15] ──────> [20] ─>
-          [30] ──────> NULL ↓ ↓ ↓ ↓ ↓ Level 0: HEAD → [5] → [10] → [15] → [20] →
-          [25] → [30] → [35] → NULL (ALL NODES AT LEVEL 0)
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ QUERY PROCESSOR ARCHITECTURE │
+          └─────────────────────────────────────────────────────────────────────────┘
+          User Query "machine AND learning" │ ▼ ┌─────────────────────────────┐
+          │ Text Analyzer │ │ (tokenize, stem, etc.) │
+          └──────────────┬──────────────┘ │ ["machine", "learning"] │ ▼
+          ┌─────────────────────────────┐ │ Query Builder │ │ (constructs query
+          tree) │ └──────────────┬──────────────┘ │ Query Tree: AND(machine,
+          learning) │ ┌─────────────────────┼─────────────────────┐ │ │ │ ▼ ▼ ▼
+          ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ │ Bitmap Ops │ │
+          Skip List │ │ BM25 Scorer │ │ (fast AND/OR)│ │ (positions) │ │
+          (ranking) │ └───────┬───────┘ └───────┬───────┘ └───────┬───────┘ │ │
+          │ └─────────────────────┼─────────────────────┘ │ ▼ ┌───────────────┐
+          │ Results │ │ (ranked docs)│ └───────────────┘
         </div>
 
-        <div class="highlight-box">
-          <p><strong>Node Structure:</strong></p>
-          <div class="ascii-art">
-            ┌───────┐ │ Node │ Each node has a "tower" of forward pointers
-            ├───────┤ │ Key │ Example: Node [15] ├───────┤ │ Lvl 3 │ ──> [30]
-            (skip far ahead) │ Lvl 2 │ ──> [30] (skip ahead) │ Lvl 1 │ ──> [20]
-            (skip a little) │ Lvl 0 │ ──> [20] (next node) └───────┘
-          </div>
-        </div>
+        <h3>Hybrid Storage Model</h3>
+        <p>
+          Blaze uses a sophisticated hybrid storage model that combines the
+          speed of roaring bitmaps with the precision of skip lists.
+        </p>
 
-        <p><strong>How Heights are Assigned (Probabilistic):</strong></p>
         <div class="ascii-art">
-          Coin Flip Algorithm: ┌─────────┬─────────────┬─────────────┐ │ Height
-          │ Probability │ Visual │ ├─────────┼─────────────┼─────────────┤ │ 1 │
-          50% │ ▓▓▓▓▓ │ │ 2 │ 25% │ ▓▓▓ │ │ 3 │ 12.5% │ ▓▓ │ │ 4 │ 6.25% │ ▓ │
-          └─────────┴─────────────┴─────────────┘ For 1000 nodes, expected
-          distribution: Level 0: ~1000 nodes (all)
-          ████████████████████████████████████████ Level 1: ~500 nodes
-          ████████████████████ Level 2: ~250 nodes ██████████ Level 3: ~125
-          nodes █████ Level 4: ~62 nodes ██
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ HYBRID STORAGE MODEL │
+          └─────────────────────────────────────────────────────────────────────────┘
+          For each term "machine":
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ DOCUMENT LEVEL (Roaring Bitmap) │ │
+          ──────────────────────────────────────────────────────────────────────
+          │ │ │ │ DocBitmaps["machine"] = {1, 2, 4, 5, 100, 500, 1000, ...} │ │
+          │ │ Compressed representation of ALL documents containing "machine" │
+          │ Use: Fast boolean operations (AND, OR, NOT) │ │ Size: ~60 KB for
+          500k documents (400x compression!) │ │ │
+          └─────────────────────────────────────────────────────────────────────────┘
+          │ │ Links to ▼
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ POSITION LEVEL (Skip List) │ │
+          ──────────────────────────────────────────────────────────────────────
+          │ │ │ │ PostingsList["machine"] = SkipList: │ │ │ │ Level 2:
+          [Doc1:Pos5] ────────────────────────> [Doc100:Pos12] │ │ │ │ │ │ Level
+          1: [Doc1:Pos5] ──> [Doc2:Pos3] ───────────> [Doc100:Pos12] │ │ │ │ │ │
+          │ Level 0: [Doc1:Pos5] -> [Doc2:Pos3] -> [Doc4:Pos1] -> [Doc5:Pos7] │
+          │ -> [Doc100:Pos12] -> [Doc500:Pos2] -> ... │ │ │ │ Detailed position
+          information for EVERY occurrence │ │ Use: Phrase search, proximity
+          ranking, snippets │ │ Size: ~24 MB for 500k positions │ │ │
+          └─────────────────────────────────────────────────────────────────────────┘
+          WHY HYBRID? ─────────── 1. Bitmaps: Lightning-fast document filtering
+          (AND, OR, NOT in microseconds) 2. Skip Lists: Precise position
+          tracking for phrases and proximity 3. Best of both worlds: Speed +
+          Precision
         </div>
 
-        <p><strong>Search Algorithm Example</strong> (finding 20):</p>
+        <h3>Query Execution Flow</h3>
+        <p>
+          Here's how a complex query executes step-by-step, showcasing the power
+          of the hybrid storage approach.
+        </p>
+
         <div class="ascii-art">
-          Step-by-Step Search for Key = 20: Level 3: [HEAD]
-          ───────────────────────────────> [30] (30 > 20, drop down) ↓ Level 2:
-          [HEAD] ──────────────> [15] ─────────> [30] (15 < 20, advance) ↓ Level
-          2: [15] ─────────> [30] (30 > 20, drop down) ↓ Level 1: [15] ──> [20]
-          (20 = 20, FOUND!) ^^^^ Journey Recorded:
-          ┌───────────┬─────────────────┐ │ Level 3 │ HEAD │ Predecessor at each
-          level │ Level 2 │ [15] │ Used for insertions/deletions │ Level 1 │
-          [15] │ │ Level 0 │ [15] │ └───────────┴─────────────────┘ Steps: 1.
-          Start at HEAD, Level 3 2. Level 3: Move to 30? No (30 > 20), drop to
-          Level 2 3. Level 2: Move to 15? Yes (15 < 20), advance to 15 4. Level
-          2: Move to 30? No (30 > 20), drop to Level 1 5. Level 1: Move to 20?
-          Yes! Found it! Time Complexity: O(log n) on average
+          QUERY: (machine OR deep) AND learning AND NOT neural
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ STEP 1: BITMAP PHASE (Fast Document Filtering) │
+          └─────────────────────────────────────────────────────────────────────────┘
+          Term Lookups (O(1) hash map): DocBitmaps["machine"] = {1, 2, 4, 5, 7,
+          8, 9, 10} DocBitmaps["deep"] = {2, 3, 5, 6, 8, 9}
+          DocBitmaps["learning"]= {1, 2, 4, 5, 6, 7, 8, 9, 10}
+          DocBitmaps["neural"] = {3, 6, 8, 9} Boolean Operations (O(1) per
+          chunk): Step 1: machine OR deep {1, 2, 4, 5, 7, 8, 9, 10} ∪ {2, 3, 5,
+          6, 8, 9} = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} Step 2: (machine OR deep)
+          AND learning {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} ∩ {1, 2, 4, 5, 6, 7, 8,
+          9, 10} = {1, 2, 4, 5, 6, 7, 8, 9, 10} Step 3: Result AND NOT neural
+          {1, 2, 4, 5, 6, 7, 8, 9, 10} \ {3, 6, 8, 9} = {1, 2, 4, 5, 7, 10} ←
+          CANDIDATE DOCUMENTS Time: ~10 microseconds for 1M documents!
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ STEP 2: POSITION PHASE (Optional - for phrases/proximity) │
+          └─────────────────────────────────────────────────────────────────────────┘
+          IF phrase search needed: For each candidate doc {1, 2, 4, 5, 7, 10}:
+          Use skip lists to verify exact positions Check consecutive positions
+          for phrases Extract position data for snippets Time: O(log n) per
+          position lookup
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ STEP 3: RANKING PHASE (BM25 Scoring) │
+          └─────────────────────────────────────────────────────────────────────────┘
+          For each candidate document: 1. Calculate IDF (Inverse Document
+          Frequency): - Uses bitmap cardinality for instant document counts -
+          IDF("machine") = log((N - df + 0.5) / (df + 0.5)) - df =
+          DocBitmaps["machine"].GetCardinality() 2. Calculate TF (Term
+          Frequency): - Retrieves from pre-computed DocStats - TF("machine",
+          Doc1) = termFreqs["machine"] 3. Apply BM25 formula: - Combines IDF,
+          TF, and length normalization - Score = IDF × (TF × (k1 + 1)) / (TF +
+          k1 × length_norm) 4. Sum scores for all query terms Results sorted by
+          score: Doc 5: 8.45 Doc 2: 7.23 Doc 1: 6.91 ... Time: O(candidates ×
+          terms)
         </div>
 
-        <p><strong>Why Skip Lists?</strong></p>
-        <ul>
-          <li>O(log n) operations without complex balancing</li>
-          <li>Simpler than AVL or Red-Black trees</li>
-          <li>Better cache locality than trees</li>
-          <li>Easier to make lock-free for concurrency</li>
-          <li>Used in Redis, LevelDB, and other databases</li>
-        </ul>
+        <h3>Roaring Bitmap Internals</h3>
+        <p>
+          Roaring bitmaps provide exceptional compression and performance
+          through adaptive container selection.
+        </p>
+
+        <div class="ascii-art">
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ ROARING BITMAP STRUCTURE │
+          └─────────────────────────────────────────────────────────────────────────┘
+          Document IDs: {1, 2, 3, 100, 101, 102, 500000, 500001, 999999}
+          Traditional Bitmap (naive): [1,1,1,0,0...0,1,1,1,0...0,1,1,0...0,1]
+          Size: 1,000,000 bits = 125 KB (wasteful for sparse data) Roaring
+          Bitmap (smart): Split into 65,536 chunks (high 16 bits = chunk ID):
+          Chunk 0 (docs 0-65535): [1,2,3,100,101,102] Chunk 7 (docs
+          458752-524287): [500000, 500001] Chunk 15 (docs 983040-1048575):
+          [999999] Storage per chunk (adaptive):
+          ┌────────────────────────────────────────────────────┐ │ If
+          cardinality < 4096: │ │ → Use Array Container │ │ → Store sorted
+          uint16 values directly │ │ → Size: 2 bytes × cardinality │ │ │ │ If
+          cardinality > 4096: │ │ → Use Bitmap Container │ │ → Store 65536-bit
+          bitmap (8 KB) │ │ → Size: 8 KB fixed │ │ │ │ If cardinality = 65536
+          (all docs): │ │ → Use Run Container │ │ → Store: [0-65535] │ │ → Size:
+          4 bytes │ └────────────────────────────────────────────────────┘ Total
+          Size: ~60 bytes (vs 125 KB!) Operations: AND: Container-by-container
+          intersection Skip non-matching chunks (O(1)) Intersect matching chunks
+          (O(min(n,m))) OR: Container-by-container union Merge all chunks
+          (O(n+m)) NOT: Complement within document space Flip all bits in each
+          chunk
+        </div>
+
+        <h3>Memory Layout</h3>
+        <p>
+          Understanding the memory layout helps optimize for large-scale
+          deployments.
+        </p>
+
+        <div class="ascii-art">
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │ INVERTED INDEX STRUCTURE │
+          └─────────────────────────────────────────────────────────────────────────┘
+          InvertedIndex {
+          ┌─────────────────────────────────────────────────────────────────┐ │
+          DocBitmaps: map[string]*roaring.Bitmap │ │
+          ───────────────────────────────────────────────────────────────│ │
+          "machine" → [Compressed Bitmap: 512 bytes] │ │ "learning" →
+          [Compressed Bitmap: 448 bytes] │ │ "deep" → [Compressed Bitmap: 256
+          bytes] │ │ ... │ │ │ │ Memory: ~100 bytes per term (compressed) │
+          └─────────────────────────────────────────────────────────────────┘ │
+          │ Parallel Storage ▼
+          ┌─────────────────────────────────────────────────────────────────┐ │
+          PostingsList: map[string]SkipList │ │
+          ───────────────────────────────────────────────────────────────│ │
+          "machine" → SkipList with 10,000 position nodes │ │ "learning" →
+          SkipList with 8,000 position nodes │ │ "deep" → SkipList with 5,000
+          position nodes │ │ ... │ │ │ │ Memory: ~48 bytes per position (node
+          overhead) │
+          └─────────────────────────────────────────────────────────────────┘ │
+          │ Statistics ▼
+          ┌─────────────────────────────────────────────────────────────────┐ │
+          DocStats: map[int]DocumentStats │ │
+          ───────────────────────────────────────────────────────────────│ │
+          Doc1 → {Length: 150, TermFreqs: {"machine": 3, ...}} │ │ Doc2 →
+          {Length: 200, TermFreqs: {"learning": 5, ...}} │ │ ... │ │ │ │ Memory:
+          ~16 bytes per term per document │
+          └─────────────────────────────────────────────────────────────────┘
+          Mutex for thread safety (sync.RWMutex) } MEMORY BREAKDOWN (for 1M
+          documents, 10M unique positions):
+          ────────────────────────────────────────────────────────────
+          DocBitmaps: ~10 MB (compressed bitmaps) PostingsList: ~480 MB (skip
+          list nodes) DocStats: ~500 MB (per-doc statistics) Overhead: ~10 MB
+          (maps, pointers, etc.)
+          ──────────────────────────────────────────────────────────── TOTAL: ~1
+          GB
+        </div>
+      </section>
+
+      <section>
+        <h2>Performance</h2>
+
+        <h3>Benchmarks</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Ops/sec</th>
+              <th>Time/op</th>
+              <th>Allocs/op</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Query Builder (Simple)</td>
+              <td>440,616</td>
+              <td>2,511 ns</td>
+              <td>39</td>
+            </tr>
+            <tr>
+              <td>Query Builder (Complex)</td>
+              <td>222,024</td>
+              <td>5,333 ns</td>
+              <td>98</td>
+            </tr>
+            <tr>
+              <td>Query Builder (BM25)</td>
+              <td>411,124</td>
+              <td>2,955 ns</td>
+              <td>46</td>
+            </tr>
+            <tr>
+              <td>Term Search</td>
+              <td>300,000</td>
+              <td>4,123 ns</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td>Phrase Search</td>
+              <td>100,000</td>
+              <td>12,456 ns</td>
+              <td>12</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Operation Costs</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Complexity</th>
+              <th>Why It's Fast</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bitmap AND</td>
+              <td>O(1) per chunk</td>
+              <td>Roaring bitmap intersection</td>
+            </tr>
+            <tr>
+              <td>Bitmap OR</td>
+              <td>O(1) per chunk</td>
+              <td>Roaring bitmap union</td>
+            </tr>
+            <tr>
+              <td>Bitmap NOT</td>
+              <td>O(1) per chunk</td>
+              <td>Roaring bitmap difference</td>
+            </tr>
+            <tr>
+              <td>Term Lookup</td>
+              <td>O(1)</td>
+              <td>Direct hash map access</td>
+            </tr>
+            <tr>
+              <td>Position Lookup</td>
+              <td>O(log n)</td>
+              <td>Skip list binary search</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Search Operations</h2>
+
+        <h3>Phrase Search</h3>
+        <p>
+          Find exact sequences of words. Blaze uses skip lists to efficiently
+          verify consecutive positions.
+        </p>
+
+        <div class="ascii-art">
+          SEARCHING FOR PHRASE: "brown fox" Document: "the quick brown dog
+          jumped over the brown fox" Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find
+          END (last word "fox")
+          ┌─────────────────────────────────────────────────────────┐ │ Find
+          "brown" → Doc:Pos2 │ │ Find "fox" after Pos2 → Doc:Pos8 ← END position
+          │ └─────────────────────────────────────────────────────────┘ Phase 2:
+          Walk BACKWARDS from END to find START
+          ┌─────────────────────────────────────────────────────────┐ │ From
+          Pos9, find previous "brown" → Doc:Pos7 ← START │
+          └─────────────────────────────────────────────────────────┘ Phase 3:
+          Validate ┌─────────────────────────────────────────────────────────┐ │
+          Start: Pos7, End: Pos8 │ │ Distance: 8 - 7 = 1 │ │ Expected: 2 words -
+          1 = 1 MATCH! │ │ │ │ "brown" "fox" │ │ ▲ ▲ │ │ Pos7 Pos8 (consecutive
+          positions) │
+          └─────────────────────────────────────────────────────────┘
+        </div>
+
+        <pre><code class="language-go">// Find exact phrase "quick brown fox"
+matches := idx.FindAllPhrases("quick brown fox", blaze.BOFDocument)
+
+for _, match := range matches {
+    start, end := match[0], match[1]
+    fmt.Printf("Found in Doc %d from Pos %d to %d\n",
+        int(start.DocumentID), int(start.Offset), int(end.Offset))
+}</code></pre>
+
+        <h3>Proximity Search</h3>
+        <p>
+          Find documents containing all terms (not necessarily consecutive).
+          Score documents by how close the terms appear together.
+        </p>
+
+        <div class="ascii-art">
+          SEARCHING FOR: ["quick", "fox"] (any order, not necessarily
+          consecutive) Document: "the quick brown dog jumped over the lazy fox"
+          Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find COVER END (furthest term)
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Find "quick" after BOF → Doc:Pos1 │ │ Find "fox" after BOF → Doc:Pos8
+          ← FURTHEST (cover end) │
+          └──────────────────────────────────────────────────────────────┘ Phase
+          2: Find COVER START (earliest term before end)
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Find "quick" before Pos9 → Doc:Pos1 ← EARLIEST (cover start)│ │ Find
+          "fox" before Pos9 → Doc:Pos8 │
+          └──────────────────────────────────────────────────────────────┘ Phase
+          3: Calculate Proximity Score
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Cover: [Pos1, Pos8] │ │ Same document? Yes │ │ All terms present? Yes
+          │ │ │ │ "quick" ... ... ... ... ... ... ... "fox" │ │ ▲ ▲ │ │ Pos1
+          Pos8 │ │ └────────── Cover Range ──────────────┘ │ │ │ │ Proximity
+          Score: 1 / (8 - 1 + 1) = 1/8 = 0.125 │
+          └──────────────────────────────────────────────────────────────┘
+          PROXIMITY SCORING EXAMPLES: ─────────────────────────── Doc 1:
+          "machine learning is machine learning" Pos:0 1 2 3 4 Cover 1: [Pos
+          0-1] → score += 1/(1-0+1) = 1/2 = 0.500 Cover 2: [Pos 3-4] → score +=
+          1/(4-3+1) = 1/2 = 0.500 ───────────────────────────── Total Score:
+          1.000 Doc 2: "learning about machine and learning" Pos:0 1 2 3 4 Cover
+          1: [Pos 0-2] → score += 1/(2-0+1) = 1/3 = 0.333 Cover 2: [Pos 2-4] →
+          score += 1/(4-2+1) = 1/3 = 0.333 ───────────────────────────── Total
+          Score: 0.666 Doc 3: "machine ... ... ... ... learning" Pos:0 1 2 3 4 5
+          Cover 1: [Pos 0-5] → score += 1/(5-0+1) = 1/6 = 0.167
+          ───────────────────────────── Total Score: 0.167 Ranking: Doc 1
+          (1.000) > Doc 2 (0.666) > Doc 3 (0.167) ▲ ▲ ▲ Terms closest Terms
+          medium Terms far apart
+        </div>
+
+        <pre><code class="language-go">// Rank documents by proximity
+matches := idx.RankProximity("quick brown", 5)
+
+for _, match := range matches {
+    fmt.Printf("Doc %d: Score %.2f\n",
+        int(match.Offsets[0].DocumentID),
+        match.Score)
+}</code></pre>
+
+        <h3>Skip Lists Explained</h3>
+        <p>
+          Skip lists are the core data structure for position tracking. They
+          provide O(log n) operations while being simpler than balanced trees.
+        </p>
+
+        <div class="ascii-art">
+          SKIP LIST STRUCTURE: Multiple levels like express lanes Level 3: HEAD
+          ────────────────────────────────> [30] ───────> NULL ↓ ↓ Level 2: HEAD
+          ─────────────> [15] ────────────> [30] ───────> NULL ↓ ↓ ↓ Level 1:
+          HEAD ─────> [10] ──> [15] ──> [20] ──> [30] ───────> NULL ↓ ↓ ↓ ↓ ↓
+          Level 0: HEAD ─> [5] ─> [10] ─> [15] ─> [20] ─> [25] ─> [30] ─> [35]
+          ─> NULL (ALL NODES AT LEVEL 0) ┌───────┐ │ Node │ Each node has a
+          "tower" of forward pointers ├───────┤ │ Key │ Example: Node [15]
+          ├───────┤ │ Lvl 3 │ ──> [30] (skip far ahead) │ Lvl 2 │ ──> [30] (skip
+          ahead) │ Lvl 1 │ ──> [20] (skip a little) │ Lvl 0 │ ──> [20] (next
+          node) └───────┘ SEARCHING FOR KEY = 20: ───────────────────────
+          Step-by-Step Search: Level 3: [HEAD] ───────────────────────────────>
+          [30] (30 > 20, drop down) ↓ Level 2: [HEAD] ──────────────> [15]
+          ─────────> [30] (15 < 20, advance) ↓ Level 2: [15] ─────────> [30] (30
+          > 20, drop down) ↓ Level 1: [15] ──> [20] (20 = 20, FOUND!) ^^^^
+          Journey Recorded (used for insertions/deletions):
+          ┌───────────┬─────────────────┐ │ Level 3 │ HEAD │ │ Level 2 │ [15] │
+          │ Level 1 │ [15] │ │ Level 0 │ [15] │ └───────────┴─────────────────┘
+          Time Complexity: O(log n) on average HEIGHT DISTRIBUTION
+          (Probabilistic): ──────────────────────────────────── For 1000 nodes:
+          Level 0: ~1000 nodes (all) ████████████████████████████████████████
+          Level 1: ~500 nodes ████████████████████ Level 2: ~250 nodes
+          ██████████ Level 3: ~125 nodes █████ Level 4: ~62 nodes ██
+        </div>
 
         <h3>Text Analysis Pipeline</h3>
         <p>
           Blaze transforms raw text into searchable tokens through a multi-stage
-          pipeline:
+          pipeline.
         </p>
 
         <div class="ascii-art">
@@ -725,120 +809,45 @@ Document 1 (score: 0.50)</code></pre>
           Remove tokens < 2 chars │ └────────────────┬───────────────────────┘ ▼
           ┌────────────────────────────────────────┐ │ 5. Stemming
           (Snowball/Porter2) │ │ Reduce to root ("running" → "run") │
-          └────────────────┬───────────────────────┘ ▼ Final Tokens
+          └────────────────┬───────────────────────┘ ▼ Final Tokens EXAMPLE
+          TRANSFORMATION: ─────────────────────── Input: "The Quick Brown Fox
+          Jumps!" │ ├─ Step 1: Tokenization │ └─> ["The", "Quick", "Brown",
+          "Fox", "Jumps"] │ ├─ Step 2: Lowercasing │ └─> ["the", "quick",
+          "brown", "fox", "jumps"] │ ├─ Step 3: Stopword Filtering (remove
+          "the") │ └─> ["quick", "brown", "fox", "jumps"] │ ├─ Step 4: Length
+          Filtering (all pass >= 2 chars) │ └─> ["quick", "brown", "fox",
+          "jumps"] │ └─ Step 5: Stemming ("jumps" → "jump") └─> ["quick",
+          "brown", "fox", "jump"]
         </div>
 
-        <div class="highlight-box">
-          <p><strong>Example Transformation:</strong></p>
-          <div class="ascii-art">
-            Input: "The Quick Brown Fox Jumps!" │ ├─ Step 1: Tokenization │ └─>
-            ["The", "Quick", "Brown", "Fox", "Jumps"] │ ├─ Step 2: Lowercasing │
-            └─> ["the", "quick", "brown", "fox", "jumps"] │ ├─ Step 3: Stopword
-            Filtering (remove "the") │ └─> ["quick", "brown", "fox", "jumps"] │
-            ├─ Step 4: Length Filtering (all pass >= 2 chars) │ └─> ["quick",
-            "brown", "fox", "jumps"] │ └─ Step 5: Stemming ("jumps" → "jump")
-            └─> ["quick", "brown", "fox", "jump"]
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2>Search Operations</h2>
-
-        <h3>1. Basic Term Search</h3>
-        <p>Find all occurrences of a single term:</p>
-        <pre><code class="language-go">idx := blaze.NewInvertedIndex()
-idx.Index(1, "the quick brown fox")
-idx.Index(2, "quick brown dogs")
-
-// Find first occurrence of "quick"
-pos, err := idx.First("quick")
-if err == nil {
-    fmt.Printf("Found at Doc %d, Pos %d\n",
-        int(pos.DocumentID), int(pos.Offset))
-}
-
-// Find next occurrence
-nextPos, _ := idx.Next("quick", pos)</code></pre>
-
-        <h3>2. Phrase Search</h3>
-        <p>Find exact sequences of words:</p>
-        <pre><code class="language-go">// Find documents containing "quick brown fox" as a phrase
-matches := idx.FindAllPhrases("quick brown fox", blaze.BOFDocument)
-
-for _, match := range matches {
-    start, end := match[0], match[1]
-    fmt.Printf("Found in Doc %d from Pos %d to %d\n",
-        int(start.DocumentID), int(start.Offset), int(end.Offset))
-}</code></pre>
-
-        <p><strong>Phrase Search Algorithm:</strong></p>
-        <div class="ascii-art">
-          Searching for phrase: "brown fox" Document: "the quick brown dog
-          jumped over the brown fox" Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find
-          END (last word "fox")
-          ┌─────────────────────────────────────────────────────────┐ │ Find
-          "brown" → Doc:Pos2 │ │ Find "fox" after Pos2 → Doc:Pos8 ← END position
-          │ └─────────────────────────────────────────────────────────┘ Phase 2:
-          Walk BACKWARDS from END to find START
-          ┌─────────────────────────────────────────────────────────┐ │ From
-          Pos9, find previous "brown" → Doc:Pos7 ← START │
-          └─────────────────────────────────────────────────────────┘ Phase 3:
-          Validate ┌─────────────────────────────────────────────────────────┐ │
-          Start: Pos7, End: Pos8 │ │ Distance: 8 - 7 = 1 │ │ Expected: 2 words -
-          1 = 1 MATCH! │ │ │ │ "brown" "fox" │ │ ▲ ▲ │ │ Pos7 Pos8 (consecutive
-          positions) │
-          └─────────────────────────────────────────────────────────┘ Steps: 1.
-          Find END: Locate the last word of the phrase 2. Walk BACKWARDS: Find
-          previous occurrences of earlier words 3. Validate: Check if positions
-          are consecutive 4. Recurse: Continue searching for more matches
-        </div>
-
-        <h3>3. Proximity Search</h3>
+        <h3>BM25 Algorithm</h3>
         <p>
-          Find documents containing all terms (not necessarily consecutive):
+          BM25 (Best Matching 25) is the industry-standard ranking function used
+          by Elasticsearch, Solr, and Lucene. It considers term frequency,
+          document length, and term rarity.
         </p>
-        <pre><code class="language-go">// Find documents with both "quick" and "fox"
-cover := idx.NextCover([]string{"quick", "fox"}, blaze.BOFDocument)
-start, end := cover[0], cover[1]
 
-// Calculate proximity score
-distance := end.Offset - start.Offset
-score := 1.0 / distance  // Closer terms = higher score</code></pre>
-
-        <p><strong>Cover Algorithm:</strong></p>
         <div class="ascii-art">
-          Searching for: ["quick", "fox"] (any order, not necessarily
-          consecutive) Document: "the quick brown dog jumped over the lazy fox"
-          Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find COVER END (furthest term)
-          ┌──────────────────────────────────────────────────────────────┐ │
-          Find "quick" after BOF → Doc:Pos1 │ │ Find "fox" after BOF → Doc:Pos8
-          ← FURTHEST (cover end) │
-          └──────────────────────────────────────────────────────────────┘ Phase
-          2: Find COVER START (earliest term before end)
-          ┌──────────────────────────────────────────────────────────────┐ │
-          Find "quick" before Pos9 → Doc:Pos1 ← EARLIEST (cover start)│ │ Find
-          "fox" before Pos9 → Doc:Pos8 │
-          └──────────────────────────────────────────────────────────────┘ Phase
-          3: Validate & Return
-          ┌──────────────────────────────────────────────────────────────┐ │
-          Cover: [Pos1, Pos8] │ │ Same document? Yes │ │ All terms present? Yes
-          │ │ │ │ "quick" ... ... ... ... ... ... ... "fox" │ │ ▲ ▲ │ │ Pos1
-          Pos8 │ │ └────────── Cover Range ──────────────┘ │ │ │ │ Proximity
-          Score: 1 / (8 - 1 + 1) = 1/8 = 0.125 │
-          └──────────────────────────────────────────────────────────────┘
-          Steps: 1. Find FURTHEST occurrence of any term (cover end) 2. Find
-          EARLIEST occurrence of each term before end (cover start) 3. Validate
-          all terms are in the same document 4. Return [start, end] positions
+          BM25 FORMULA: ───────────── IDF(q_i) × TF(q_i, D) × (k1 + 1) BM25(D,
+          Q) = SUM ───────────────────────────────────────── q_i TF(q_i, D) + k1
+          × (1 - b + b × |D|/avgdl) in Q Where: D = Document being scored Q =
+          Query (set of terms q_1, q_2, ..., q_n) q_i = Individual query term
+          IDF = Inverse Document Frequency (term rarity) TF = Term Frequency
+          (occurrences in document) k1 = 1.5 (term frequency saturation
+          parameter) b = 0.75 (length normalization parameter) |D| = Document
+          length avgdl = Average document length WHAT BM25 CONSIDERS:
+          ──────────────────── 1. Term Frequency: How often does the term
+          appear? More occurrences = higher relevance 2. TF Saturation:
+          Diminishing returns 3→10 occurrences matters less than 0→3 3. Document
+          Length: Normalize by document size Prevents long docs from dominating
+          results 4. Term Rarity: Rare terms are more important "quantum" >
+          "the" in importance TERM FREQUENCY SATURATION:
+          ────────────────────────── Score Contribution (with k1=1.5, b=0.75) ^
+          | /--------------- (saturation) | / 3 | / | / 2 | / | / 1 | / | / 0
+          |______/ +---+---+---+---+---+---+---+---+---+---+---> Term Frequency
+          0 1 2 3 4 5 6 7 8 9 10 Key: Going from 0→3 occurrences adds more to
+          the score than going from 7→10 occurrences (diminishing returns)
         </div>
-
-        <h3>4. BM25 Ranking</h3>
-        <p>
-          <strong>BM25 (Best Matching 25)</strong> is a probabilistic ranking
-          function used by search engines to estimate the relevance of documents
-          to a given search query. It's the industry standard used by
-          Elasticsearch, Solr, and Lucene.
-        </p>
 
         <pre><code class="language-go">// Search and rank using BM25
 results := idx.RankBM25("machine learning", 10)
@@ -848,560 +857,134 @@ for _, match := range results {
         match.DocID,
         match.Score)
 }</code></pre>
+      </section>
 
-        <div class="highlight-box">
-          <p><strong>What BM25 Considers:</strong></p>
-          <ul style="margin-top: 0.5rem">
-            <li>
-              <strong>Term Frequency</strong> - How often does the term appear?
-              More occurrences = higher relevance
-            </li>
-            <li>
-              <strong>TF Saturation</strong> - Diminishing returns (3→10
-              occurrences matters less than 0→3)
-            </li>
-            <li>
-              <strong>Document Length</strong> - Normalize by document size,
-              prevents long docs from dominating
-            </li>
-            <li>
-              <strong>Term Rarity</strong> - Rare terms are more important than
-              common ones
-            </li>
-          </ul>
-        </div>
+      <section>
+        <h2>Real-World Examples</h2>
 
-        <p><strong>Complete BM25 Formula:</strong></p>
-        <div class="ascii-art">
-          IDF(q_i) × TF(q_i, D) × (k1 + 1) BM25(D, Q) = SUM
-          ───────────────────────────────────────── q_i TF(q_i, D) + k1 × (1 - b
-          + b × |D|/avgdl) in Q Where: D = Document being scored Q = Query (set
-          of terms q_1, q_2, ..., q_n) q_i = Individual query term
-        </div>
-
-        <p><strong>Component Breakdown:</strong></p>
-        <div class="ascii-art">
-          +-------------------+-----------------------------------------------------+
-          | Component | Definition |
-          +-------------------+-----------------------------------------------------+
-          | IDF(q_i) | Inverse Document Frequency | | | | | | N - df(q_i) + 0.5
-          | | | log( ─────────────────────── + 1 ) | | | df(q_i) + 0.5 | | | | |
-          | N = Total documents in corpus | | | df = Documents containing term
-          q_i | | | Effect: Rare terms get higher weights |
-          +-------------------+-----------------------------------------------------+
-          | TF(q_i, D) | Term Frequency | | | = Number of times q_i appears in
-          document D | | | Effect: More occurrences = higher relevance |
-          +-------------------+-----------------------------------------------------+
-          | k1 | Term Frequency Saturation Parameter | | | = 1.5 (default),
-          Range: [1.2, 2.0] | | | Effect: Controls diminishing returns |
-          +-------------------+-----------------------------------------------------+
-          | b | Length Normalization Parameter | | | = 0.75 (default), Range:
-          [0, 1] | | | Effect: Controls length penalty |
-          +-------------------+-----------------------------------------------------+
-        </div>
-
-        <p><strong>Visual Example - Term Frequency Saturation:</strong></p>
-        <div class="ascii-art">
-          Score Contribution (with k1=1.5, b=0.75) ^ | /---------------
-          (saturation) | / 3 | / | / 2 | / | / 1 | / | / 0 |______/
-          +---+---+---+---+---+---+---+---+---+---+---> Term Frequency 0 1 2 3 4
-          5 6 7 8 9 10 Key Insight: Going from 0→3 occurrences adds more to the
-          score than going from 7→10 occurrences (diminishing returns)
-        </div>
-
-        <p><strong>Why BM25 Works:</strong></p>
-        <ul>
-          <li>
-            <strong>Industry Standard</strong> - Used by Elasticsearch, Solr,
-            Lucene
-          </li>
-          <li>
-            <strong>Probabilistic</strong> - Based on probability ranking
-            principle
-          </li>
-          <li>
-            <strong>Term Rarity (IDF)</strong> - Rare terms contribute more to
-            score
-          </li>
-          <li>
-            <strong>Saturation</strong> - Diminishing returns for repeated terms
-          </li>
-          <li>
-            <strong>Length Normalization</strong> - Prevents long documents from
-            dominating
-          </li>
-          <li>
-            <strong>Tunable</strong> - Adjust k1 and b for domain-specific needs
-          </li>
-        </ul>
-
-        <div class="highlight-box">
-          <p><strong>Comparison: Simple TF-IDF vs BM25</strong></p>
-          <p>
-            Simple TF-IDF has a linear relationship with term frequency (10
-            occurrences = 10x score of 1). BM25 uses a sublinear relationship
-            that saturates, preventing keyword stuffing exploits.
-          </p>
-        </div>
-
-        <h3>5. Proximity Ranking</h3>
-        <p>Score and rank documents by term proximity (alternative to BM25):</p>
-        <pre><code class="language-go">// Search and rank results
-matches := idx.RankProximity("machine learning", 10)
-
-for _, match := range matches {
-    fmt.Printf("Doc %d: Score %.2f\n",
-        int(match.Offsets[0].DocumentID),
-        match.Score)
+        <h3>E-commerce Search</h3>
+        <pre><code class="language-go">func SearchProducts(idx *blaze.InvertedIndex, query string, 
+                    category string, excludeOutOfStock bool) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx).Term(query)
+    
+    // Add category filter
+    if category != "" {
+        qb.And().Term(category)
+    }
+    
+    // Exclude out of stock items
+    if excludeOutOfStock {
+        qb.And().Not().Term("outofstock")
+    }
+    
+    return qb.ExecuteWithBM25(20)
 }</code></pre>
 
-        <div class="highlight-box">
-          <p><strong>Scoring Formula:</strong></p>
-          <p>
-            For each cover in a document:<br />
-            <code>score += 1 / (coverEnd - coverStart + 1)</code>
-          </p>
-        </div>
+        <h3>Multi-Category Search</h3>
+        <pre><code class="language-go">func SearchInCategories(idx *blaze.InvertedIndex, 
+                        query string, categories []string) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx).Term(query)
+    
+    if len(categories) > 0 {
+        qb.And().Group(func(q *blaze.QueryBuilder) {
+            q.Term(categories[0])
+            for i := 1; i < len(categories); i++ {
+                q.Or().Term(categories[i])
+            }
+        })
+    }
+    
+    return qb.ExecuteWithBM25(50)
+}</code></pre>
 
-        <p><strong>Proximity Scoring Examples:</strong></p>
-        <div class="ascii-art">
-          ┌────────────────────────────────────────────────────────────────┐ │
-          Proximity Scoring Examples │
-          ├────────────────────────────────────────────────────────────────┤ │ │
-          │ Doc 1: "machine learning is machine learning" │ │ Pos:0 1 2 3 4 │ │
-          │ │ Cover 1: [Pos 0-1] → score += 1/(1-0+1) = 1/2 = 0.500 │ │ Cover 2:
-          [Pos 3-4] → score += 1/(4-3+1) = 1/2 = 0.500 │ │
-          ───────────────────────────── │ │ Total Score: 1.000 │ │ │
-          ├────────────────────────────────────────────────────────────────┤ │ │
-          │ Doc 2: "learning about machine and learning" │ │ Pos:0 1 2 3 4 │ │ │
-          │ Cover 1: [Pos 0-2] → score += 1/(2-0+1) = 1/3 = 0.333 │ │ Cover 2:
-          [Pos 2-4] → score += 1/(4-2+1) = 1/3 = 0.333 │ │
-          ───────────────────────────── │ │ Total Score: 0.666 │ │ │
-          ├────────────────────────────────────────────────────────────────┤ │ │
-          │ Doc 3: "machine ... ... ... ... learning" │ │ Pos:0 1 2 3 4 5 │ │ │
-          │ Cover 1: [Pos 0-5] → score += 1/(5-0+1) = 1/6 = 0.167 │ │
-          ───────────────────────────── │ │ Total Score: 0.167 │ │ │
-          └────────────────────────────────────────────────────────────────┘
-          Ranking: Doc 1 (1.000) > Doc 2 (0.666) > Doc 3 (0.167) ▲ ▲ ▲ Terms
-          closest Terms medium Terms far apart Why This Works: - Smaller
-          distances → larger scores (inverse relationship) - Multiple
-          occurrences → higher scores (additive) - Documents with terms close
-          together rank higher
-        </div>
-      </section>
-
-      <section>
-        <h2>API Reference</h2>
-
-        <h3>InvertedIndex Methods</h3>
-
-        <h4>NewInvertedIndex</h4>
-        <pre><code class="language-go">func NewInvertedIndex() *InvertedIndex</code></pre>
-        <p>Creates a new empty inverted index.</p>
-
-        <h4>Index</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) Index(docID int, document string)</code></pre>
-        <p>Adds a document to the inverted index. Thread-safe.</p>
-
-        <h4>RankBM25</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) RankBM25(query string, maxResults int) []Match</code></pre>
-        <p>
-          Performs BM25 ranking of search results. This is the recommended
-          search function for most use cases.
-        </p>
-
-        <h4>RankProximity</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) RankProximity(query string, maxResults int) []Match</code></pre>
-        <p>
-          Performs proximity-based ranking of search results. Alternative to
-          BM25, ranks by term proximity.
-        </p>
-
-        <div class="highlight-box">
-          <p><strong>BM25 vs Proximity:</strong></p>
-          <table style="margin-top: 0.5rem; font-size: 0.9rem">
-            <tr>
-              <th>Feature</th>
-              <th>BM25</th>
-              <th>Proximity</th>
-            </tr>
-            <tr>
-              <td>Term Rarity</td>
-              <td>Yes (IDF)</td>
-              <td>No (all equal)</td>
-            </tr>
-            <tr>
-              <td>Length Normalization</td>
-              <td>Yes (built-in)</td>
-              <td>No</td>
-            </tr>
-            <tr>
-              <td>Term Frequency</td>
-              <td>Yes (with saturation)</td>
-              <td>No</td>
-            </tr>
-            <tr>
-              <td>Term Distance</td>
-              <td>No</td>
-              <td>Yes (main factor)</td>
-            </tr>
-            <tr>
-              <td>Use Case</td>
-              <td>General search</td>
-              <td>Close co-occurrences</td>
-            </tr>
-          </table>
-        </div>
-
-        <h4>FindAllPhrases</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) FindAllPhrases(query string, startPos Position) [][]Position</code></pre>
-        <p>Finds all occurrences of a phrase in the entire index.</p>
-
-        <h4>NextCover</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) NextCover(tokens []string, startPos Position) []Position</code></pre>
-        <p>Finds the next "cover" - a range containing all given tokens.</p>
-
-        <h4>Encode / Decode</h4>
-        <pre><code class="language-go">func (idx *InvertedIndex) Encode() ([]byte, error)
-func (idx *InvertedIndex) Decode(data []byte) error</code></pre>
-        <p>Serializes and deserializes the index to/from binary format.</p>
-
-        <h3>Text Analysis</h3>
-
-        <h4>Analyze</h4>
-        <pre><code class="language-go">func Analyze(text string) []string</code></pre>
-        <p>
-          Transforms raw text into searchable tokens using the default pipeline.
-        </p>
-
-        <h4>AnalyzeWithConfig</h4>
-        <pre><code class="language-go">func AnalyzeWithConfig(text string, config AnalyzerConfig) []string</code></pre>
-        <p>Transforms text using a custom configuration.</p>
-        <pre><code class="language-go">config := blaze.AnalyzerConfig{
-    MinTokenLength:  3,      // Only keep tokens >= 3 chars
-    EnableStemming:  false,  // Disable stemming
-    EnableStopwords: true,   // Keep stopword filtering
-}
-tokens := blaze.AnalyzeWithConfig("The quick brown fox", config)</code></pre>
-      </section>
-
-      <section>
-        <h2>Performance</h2>
-
-        <h3>Time Complexity</h3>
-        <table>
-          <tr>
-            <th>Operation</th>
-            <th>Average</th>
-            <th>Worst Case</th>
-            <th>Notes</th>
-          </tr>
-          <tr>
-            <td>Index (per document)</td>
-            <td>O(n × log m)</td>
-            <td>O(n × m)</td>
-            <td>n = tokens, m = total positions</td>
-          </tr>
-          <tr>
-            <td>Term lookup</td>
-            <td>O(log m)</td>
-            <td>O(m)</td>
-            <td>m = positions for term</td>
-          </tr>
-          <tr>
-            <td>Phrase search</td>
-            <td>O(k × log m)</td>
-            <td>O(k × m)</td>
-            <td>k = phrase length</td>
-          </tr>
-          <tr>
-            <td>BM25 ranking</td>
-            <td>O(t × d)</td>
-            <td>O(t × d)</td>
-            <td>t = query terms, d = candidates</td>
-          </tr>
-          <tr>
-            <td>Proximity ranking</td>
-            <td>O(t × m)</td>
-            <td>O(t × m)</td>
-            <td>t = query terms</td>
-          </tr>
-        </table>
-
-        <h3>Benchmarks</h3>
-        <p>Performance on Apple M2 (8 cores), Go 1.24:</p>
-        <pre><code>BenchmarkIndex-8                     50000    35421 ns/op    18234 B/op    245 allocs/op
-BenchmarkTermSearch-8               300000     4123 ns/op      128 B/op      3 allocs/op
-BenchmarkPhraseSearch-8             100000    12456 ns/op      512 B/op     12 allocs/op
-BenchmarkRankBM25-8                  60000    24567 ns/op     1856 B/op     38 allocs/op
-BenchmarkProximityRanking-8          50000    28934 ns/op     2048 B/op     45 allocs/op
-BenchmarkCalculateIDF-8            5000000      234 ns/op       16 B/op      1 allocs/op
-BenchmarkCalculateBM25Score-8      2000000      567 ns/op       64 B/op      2 allocs/op
-BenchmarkSkipListInsert-8          3000000      413 ns/op      255 B/op      6 allocs/op
-BenchmarkSkipListSearch-8          5000000      203 ns/op       23 B/op      1 allocs/op</code></pre>
-
-        <h3>Scalability</h3>
-        <table>
-          <tr>
-            <th>Documents</th>
-            <th>Terms</th>
-            <th>Index Time</th>
-            <th>Search Time</th>
-            <th>Memory</th>
-          </tr>
-          <tr>
-            <td>1K</td>
-            <td>10K</td>
-            <td>50ms</td>
-            <td>0.5ms</td>
-            <td>2 MB</td>
-          </tr>
-          <tr>
-            <td>10K</td>
-            <td>100K</td>
-            <td>500ms</td>
-            <td>1ms</td>
-            <td>20 MB</td>
-          </tr>
-          <tr>
-            <td>100K</td>
-            <td>1M</td>
-            <td>5s</td>
-            <td>2ms</td>
-            <td>200 MB</td>
-          </tr>
-          <tr>
-            <td>1M</td>
-            <td>10M</td>
-            <td>50s</td>
-            <td>5ms</td>
-            <td>2 GB</td>
-          </tr>
-        </table>
+        <h3>Advanced Boolean Search</h3>
+        <pre><code class="language-go">// Find documents about (machine learning OR deep learning) 
+// AND (python OR tensorflow)
+results := blaze.NewQueryBuilder(idx).
+    Group(func(q *blaze.QueryBuilder) {
+        q.Phrase("machine learning").Or().Phrase("deep learning")
+    }).
+    And().
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("python").Or().Term("tensorflow")
+    }).
+    ExecuteWithBM25(20)</code></pre>
       </section>
 
       <section>
         <h2>Use Cases</h2>
-
-        <h3>1. Document Search Systems</h3>
-        <pre><code class="language-go">type Document struct {
-    ID      int
-    Title   string
-    Content string
-}
-
-func IndexDocuments(docs []Document) *blaze.InvertedIndex {
-    idx := blaze.NewInvertedIndex()
-    for _, doc := range docs {
-        text := doc.Title + " " + doc.Content
-        idx.Index(doc.ID, text)
-    }
-    return idx
-}</code></pre>
-
-        <h3>2. Log Analysis</h3>
-        <pre><code class="language-go">func IndexLogs(logFile string) (*blaze.InvertedIndex, error) {
-    idx := blaze.NewInvertedIndex()
-    file, err := os.Open(logFile)
-    if err != nil {
-        return nil, err
-    }
-    defer file.Close()
-
-    scanner := bufio.NewScanner(file)
-    lineNumber := 1
-    for scanner.Scan() {
-        idx.Index(lineNumber, scanner.Text())
-        lineNumber++
-    }
-    return idx, scanner.Err()
-}</code></pre>
-
-        <h3>3. E-commerce Product Search</h3>
-        <pre><code class="language-go">type Product struct {
-    ID          int
-    Name        string
-    Description string
-    Category    string
-    Tags        []string
-}
-
-func IndexProducts(products []Product) *blaze.InvertedIndex {
-    idx := blaze.NewInvertedIndex()
-    for _, product := range products {
-        searchText := fmt.Sprintf("%s %s %s %s",
-            product.Name,
-            product.Description,
-            product.Category,
-            strings.Join(product.Tags, " "))
-        idx.Index(product.ID, searchText)
-    }
-    return idx
-}</code></pre>
-      </section>
-
-      <section>
-        <h2>Configuration</h2>
-
-        <h3>BM25 Parameters</h3>
-        <p>Customize BM25 ranking behavior:</p>
-        <pre><code class="language-go">idx := blaze.NewInvertedIndex()
-
-// Adjust BM25 parameters before indexing
-idx.BM25Params.K1 = 2.0  // Higher = less saturation (more weight to TF)
-idx.BM25Params.B = 0.5   // Lower = less length penalty
-
-// Now index and search
-idx.Index(1, "document content")
-results := idx.RankBM25("query", 10)</code></pre>
-
-        <div class="highlight-box">
-          <p><strong>Parameter Effects:</strong></p>
-          <table style="margin-top: 0.5rem; font-size: 0.9rem">
-            <tr>
-              <th>Parameter</th>
-              <th>Range</th>
-              <th>Effect</th>
-            </tr>
-            <tr>
-              <td>K1</td>
-              <td>1.2 - 2.0</td>
-              <td>Controls TF saturation (higher = less saturation)</td>
-            </tr>
-            <tr>
-              <td>B</td>
-              <td>0 - 1</td>
-              <td>Controls length penalty (lower = less penalty)</td>
-            </tr>
-          </table>
-        </div>
-
-        <h3>Analyzer Configuration</h3>
-        <p>Customize the text analysis pipeline:</p>
-        <pre><code class="language-go">type AnalyzerConfig struct {
-    MinTokenLength  int  // Minimum token length (default: 2)
-    EnableStemming  bool // Apply stemming (default: true)
-    EnableStopwords bool // Remove stopwords (default: true)
-}</code></pre>
-
-        <div class="highlight-box">
-          <p><strong>Configuration Examples:</strong></p>
-          <p>
-            <strong>Exact matching:</strong> No stemming, keep all words<br />
-            <strong>Fuzzy matching:</strong> Aggressive stemming<br />
-            <strong>Code search:</strong> No stemming, no stopwords, longer
-            tokens
-          </p>
-        </div>
-      </section>
-
-      <section>
-        <h2>Best Practices</h2>
-
-        <ol>
-          <li>
-            <strong>Use stable document IDs</strong> - Use database primary
-            keys, not array indices
-          </li>
-          <li>
-            <strong>Batch indexing for large datasets</strong> - Process in
-            batches with periodic checkpoints
-          </li>
-          <li>
-            <strong>Choose appropriate analyzer config</strong> - Match
-            configuration to your use case
-          </li>
-          <li>
-            <strong>Persist index for large datasets</strong> - Don't rebuild
-            the index every time
-          </li>
-          <li>
-            <strong>Handle concurrent access</strong> - Use RWMutex for
-            read-heavy workloads
-          </li>
-          <li>
-            <strong>Choose the right ranking algorithm</strong> - Use BM25 for
-            general search (recommended), proximity for close term matches
-          </li>
-          <li>
-            <strong>Limit result set size</strong> - Always specify a reasonable
-            max results
-          </li>
-          <li>
-            <strong>Pre-process queries</strong> - Normalize queries before
-            searching
-          </li>
-          <li>
-            <strong>Monitor BM25 statistics</strong> - Track corpus statistics
-            for insights
-          </li>
-        </ol>
-      </section>
-
-      <section>
-        <h2>Testing</h2>
-        <pre><code class="language-bash"># Run all tests
-make test
-
-# Run tests with coverage
-make test-coverage
-
-# Run benchmarks
-make bench
-
-# Run all checks (format, vet, lint, test)
-make check</code></pre>
-
-        <div class="highlight-box">
-          <p><strong>Test Coverage:</strong></p>
-          <ul style="margin-top: 0.5rem">
-            <li>Inverted Index: 100%</li>
-            <li>Skip Lists: 100%</li>
-            <li>Text Analysis: 100%</li>
-            <li>Search Operations: 100%</li>
-            <li>BM25 Ranking: 100%</li>
-            <li>Serialization: 100%</li>
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <h2>Contributing</h2>
-        <p>Contributions are welcome! Please follow these guidelines:</p>
-
-        <h3>Development Setup</h3>
-        <pre><code class="language-bash"># Clone repository
-git clone https://github.com/wizenheimer/blaze.git
-cd blaze
-
-# Install dependencies
-make deps
-
-# Run tests
-make test
-
-# Run linter
-make lint</code></pre>
-
-        <h3>Code Style</h3>
         <ul>
-          <li>Follow Go conventions (gofmt, golint)</li>
-          <li>Write comprehensive comments</li>
-          <li>Include examples in documentation</li>
-          <li>Add tests for new features</li>
-          <li>Keep functions focused and small</li>
+          <li>
+            <strong>Document Search Systems:</strong> Build full-text search for
+            documentation, articles, or knowledge bases
+          </li>
+          <li>
+            <strong>Log Analysis:</strong> Search through application logs with
+            boolean queries and ranking
+          </li>
+          <li>
+            <strong>Code Search:</strong> Index and search source code
+            repositories
+          </li>
+          <li>
+            <strong>E-commerce:</strong> Product catalog search with filters and
+            facets
+          </li>
+          <li>
+            <strong>Email Search:</strong> Fast, local email search without
+            external services
+          </li>
+          <li>
+            <strong>Content Management:</strong> Search articles, posts, and
+            media metadata
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Key Features</h2>
+
+        <h3>Search Capabilities</h3>
+        <ul>
+          <li>Term Search: Find documents containing specific terms</li>
+          <li>Phrase Search: Exact multi-word matching</li>
+          <li>Boolean Queries: Type-safe AND, OR, NOT operations</li>
+          <li>BM25 Ranking: Industry-standard relevance scoring</li>
+          <li>Proximity Ranking: Score by term proximity</li>
+          <li>Position Tracking: Track exact word positions</li>
+        </ul>
+
+        <h3>Text Processing</h3>
+        <ul>
+          <li>Tokenization: Unicode-aware text splitting</li>
+          <li>Stemming: Snowball (Porter2) stemmer</li>
+          <li>Stopword Filtering: Remove common words</li>
+          <li>Case Normalization: Case-insensitive search</li>
+          <li>Configurable Pipeline: Customize analysis behavior</li>
+        </ul>
+
+        <h3>Data Structures</h3>
+        <ul>
+          <li>Roaring Bitmaps: 400x compression for document sets</li>
+          <li>Skip Lists: O(log n) position lookups</li>
+          <li>Inverted Index: Efficient term-to-position mapping</li>
+          <li>Binary Serialization: Compact storage format</li>
         </ul>
       </section>
 
       <footer>
-        <p>Built by <a href="https://github.com/wizenheimer">wizenheimer</a></p>
-        <p style="margin-top: 0.5rem">
-          Inspired by Elasticsearch, Lucene, Redis, and LevelDB
+        <p>
+          Built with Go. Licensed under MIT.
+          <a href="https://github.com/wizenheimer/blaze">GitHub</a> |
+          <a href="https://pkg.go.dev/github.com/wizenheimer/blaze"
+            >Documentation</a
+          >
         </p>
       </footer>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   </body>
 </html>
