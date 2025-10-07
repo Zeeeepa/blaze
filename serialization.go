@@ -3,6 +3,7 @@ package blaze
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -59,17 +60,113 @@ import (
 //	[2][0]                     ← Tower structure (only one node, no next)
 //
 // The encoder object keeps track of our position in the output buffer.
+// Encode serializes the inverted index including BM25 statistics
+//
+// BINARY FORMAT:
+// --------------
+// [Header]
+//   - TotalDocs: uint32
+//   - TotalTerms: uint64
+//   - BM25.K1: float64
+//   - BM25.B: float64
+//   - NumDocStats: uint32
+//
+// [Document Statistics] (for each document)
+//   - DocID: uint32
+//   - Length: uint32
+//   - NumTerms: uint32
+//   - For each term:
+//   - TermLength: uint32
+//   - Term: bytes
+//   - Frequency: uint32
+//
+// [Posting Lists] (existing format)
+//   - For each term...
 func (idx *InvertedIndex) Encode() ([]byte, error) {
-	encoder := newIndexEncoder()
+	buf := new(bytes.Buffer)
 
-	// Encode each term and its posting list
+	// Write header with BM25 metadata
+	if err := idx.encodeHeader(buf); err != nil {
+		return nil, err
+	}
+
+	// Write document statistics
+	if err := idx.encodeDocStats(buf); err != nil {
+		return nil, err
+	}
+
+	// Write posting lists (existing format)
+	encoder := newIndexEncoder(buf)
 	for term, skipList := range idx.PostingsList {
 		if err := encoder.encodeTerm(term, skipList); err != nil {
 			return nil, err
 		}
 	}
 
-	return encoder.buffer.Bytes(), nil
+	return buf.Bytes(), nil
+}
+
+// encodeHeader writes the index metadata
+func (idx *InvertedIndex) encodeHeader(buf *bytes.Buffer) error {
+	// Write corpus statistics
+	if err := binary.Write(buf, binary.LittleEndian, uint32(idx.TotalDocs)); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.LittleEndian, uint64(idx.TotalTerms)); err != nil {
+		return err
+	}
+
+	// Write BM25 parameters
+	if err := binary.Write(buf, binary.LittleEndian, idx.BM25Params.K1); err != nil {
+		return err
+	}
+	if err := binary.Write(buf, binary.LittleEndian, idx.BM25Params.B); err != nil {
+		return err
+	}
+
+	// Write number of documents with statistics
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(idx.DocStats))); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// encodeDocStats writes document statistics for BM25
+func (idx *InvertedIndex) encodeDocStats(buf *bytes.Buffer) error {
+	for _, docStats := range idx.DocStats {
+		// Write document ID and length
+		if err := binary.Write(buf, binary.LittleEndian, uint32(docStats.DocID)); err != nil {
+			return err
+		}
+		if err := binary.Write(buf, binary.LittleEndian, uint32(docStats.Length)); err != nil {
+			return err
+		}
+
+		// Write number of unique terms
+		if err := binary.Write(buf, binary.LittleEndian, uint32(len(docStats.TermFreqs))); err != nil {
+			return err
+		}
+
+		// Write each term and its frequency
+		for term, freq := range docStats.TermFreqs {
+			// Write term length and term
+			termBytes := []byte(term)
+			if err := binary.Write(buf, binary.LittleEndian, uint32(len(termBytes))); err != nil {
+				return err
+			}
+			if _, err := buf.Write(termBytes); err != nil {
+				return err
+			}
+
+			// Write frequency
+			if err := binary.Write(buf, binary.LittleEndian, uint32(freq)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // indexEncoder handles the encoding process
@@ -80,9 +177,9 @@ type indexEncoder struct {
 	buffer *bytes.Buffer // Accumulates the serialized data
 }
 
-func newIndexEncoder() *indexEncoder {
+func newIndexEncoder(buffer *bytes.Buffer) *indexEncoder {
 	return &indexEncoder{
-		buffer: new(bytes.Buffer),
+		buffer: buffer,
 	}
 }
 
@@ -387,11 +484,28 @@ type nodePosition struct {
 // --------
 // Input: [5]['quick'][16][1,1,3,0][4][2][2][0]...
 // Output: PostingsList["quick"] = SkipList{...}
+// Decode deserializes binary data back into an inverted index with BM25 stats
 func (idx *InvertedIndex) Decode(data []byte) error {
-	decoder := newIndexDecoder(data)
+	offset := 0
+
+	// Read header with BM25 metadata
+	newOffset, err := idx.decodeHeader(data, offset)
+	if err != nil {
+		return err
+	}
+	offset = newOffset
+
+	// Read document statistics
+	newOffset, err = idx.decodeDocStats(data, offset)
+	if err != nil {
+		return err
+	}
+	offset = newOffset
+
+	// Read posting lists (existing format)
+	decoder := newIndexDecoder(data, offset)
 	recoveredIndex := make(map[string]SkipList)
 
-	// Keep decoding terms until we've processed all the data
 	for !decoder.isComplete() {
 		term, skipList, err := decoder.decodeTerm()
 		if err != nil {
@@ -400,9 +514,77 @@ func (idx *InvertedIndex) Decode(data []byte) error {
 		recoveredIndex[term] = skipList
 	}
 
-	// Replace the current index with the reconstructed one
 	idx.PostingsList = recoveredIndex
 	return nil
+}
+
+// decodeHeader reads the index metadata
+func (idx *InvertedIndex) decodeHeader(data []byte, offset int) (int, error) {
+	// Read corpus statistics
+	idx.TotalDocs = int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
+
+	idx.TotalTerms = int64(binary.LittleEndian.Uint64(data[offset : offset+8]))
+	offset += 8
+
+	// Read BM25 parameters
+	idx.BM25Params.K1 = math.Float64frombits(binary.LittleEndian.Uint64(data[offset : offset+8]))
+	offset += 8
+
+	idx.BM25Params.B = math.Float64frombits(binary.LittleEndian.Uint64(data[offset : offset+8]))
+	offset += 8
+
+	return offset, nil
+}
+
+// decodeDocStats reads document statistics
+func (idx *InvertedIndex) decodeDocStats(data []byte, offset int) (int, error) {
+	// Read number of documents
+	numDocs := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
+
+	idx.DocStats = make(map[int]DocumentStats, numDocs)
+
+	for i := 0; i < numDocs; i++ {
+		// Read document ID and length
+		docID := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+
+		length := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+
+		// Read number of unique terms
+		numTerms := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+
+		// Initialize document stats
+		docStats := DocumentStats{
+			DocID:     docID,
+			Length:    length,
+			TermFreqs: make(map[string]int, numTerms),
+		}
+
+		// Read each term and its frequency
+		for j := 0; j < numTerms; j++ {
+			// Read term length
+			termLen := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+			offset += 4
+
+			// Read term
+			term := string(data[offset : offset+termLen])
+			offset += termLen
+
+			// Read frequency
+			freq := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+			offset += 4
+
+			docStats.TermFreqs[term] = freq
+		}
+
+		idx.DocStats[docID] = docStats
+	}
+
+	return offset, nil
 }
 
 // indexDecoder handles the decoding process
@@ -415,10 +597,10 @@ type indexDecoder struct {
 	offset int
 }
 
-func newIndexDecoder(data []byte) *indexDecoder {
+func newIndexDecoder(data []byte, offset int) *indexDecoder {
 	return &indexDecoder{
 		data:   data,
-		offset: 0,
+		offset: offset,
 	}
 }
 
