@@ -20,6 +20,14 @@ A high-performance, full-text search engine in Go featuring an inverted index wi
   - [Skip Lists](#skip-lists)
   - [Text Analysis Pipeline](#text-analysis-pipeline)
   - [Search Operations](#search-operations)
+- [Query Builder API](#query-builder-api)
+  - [Why Use Builder Pattern](#why-use-builder-pattern)
+  - [Quick Start](#query-builder-quick-start)
+  - [Core Methods](#query-builder-core-methods)
+  - [Boolean Operations](#boolean-operations)
+  - [Query Patterns](#query-patterns)
+  - [Performance](#query-builder-performance)
+  - [Best Practices](#query-builder-best-practices)
 - [API Reference](#api-reference)
 - [Examples](#examples)
 - [Performance Characteristics](#performance-characteristics)
@@ -39,6 +47,7 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 
 - **Inverted Index**: Maps terms to document positions for instant lookups
 - **Skip Lists**: Probabilistic data structure providing O(log n) operations
+- **Query Builder**: Type-safe, fluent API for boolean queries with roaring bitmaps
 - **Advanced Search**: Phrase search, BM25 ranking, proximity ranking, and boolean queries
 - **BM25 Algorithm**: Industry-standard relevance scoring with IDF and length normalization
 - **Text Analysis**: Tokenization, stemming, stopword filtering, and case normalization
@@ -51,9 +60,11 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 
 - **Term Search**: Find documents containing specific terms
 - **Phrase Search**: Exact multi-word matching ("quick brown fox")
+- **Boolean Queries**: Type-safe AND, OR, NOT operations with query builder
 - **BM25 Ranking**: Industry-standard relevance scoring (used by Elasticsearch, Solr)
 - **Proximity Ranking**: Score results by term proximity
 - **Position Tracking**: Track exact word positions within documents
+- **Roaring Bitmaps**: Compressed bitmap operations for fast boolean queries
 
 ### Text Processing
 
@@ -848,6 +859,553 @@ Ranking: Doc 1 (1.000) > Doc 2 (0.666) > Doc 3 (0.167)
 - Smaller distances → larger scores (inverse relationship)
 - Multiple occurrences → higher scores (additive)
 - Documents with terms close together rank higher
+
+## Query Builder API
+
+The Query Builder provides a **type-safe, fluent API** for constructing complex boolean queries with roaring bitmaps. No string parsing, no syntax errors - just clean, composable code.
+
+### Why Use Builder Pattern
+
+**String Parsing Approach:**
+
+```go
+// Error-prone, runtime failures
+results, err := index.ExecuteQuery("(machine AND learning) OR python")
+if err != nil {
+    // Handle parsing errors
+}
+```
+
+**Builder Pattern Approach:**
+
+```go
+// Type-safe, compile-time checks, IDE autocomplete!
+results := blaze.NewQueryBuilder(index).
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("machine").And().Term("learning")
+    }).
+    Or().
+    Term("python").
+    Execute()
+```
+
+### Query Builder Quick Start
+
+#### Single Term Query
+
+```go
+// Find all documents containing "machine"
+results := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    Execute()
+
+fmt.Printf("Found %d documents\n", results.GetCardinality())
+```
+
+#### AND Query
+
+```go
+// Find documents with BOTH "machine" AND "learning"
+results := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    And().
+    Term("learning").
+    Execute()
+```
+
+#### OR Query
+
+```go
+// Find documents with "python" OR "javascript"
+results := blaze.NewQueryBuilder(idx).
+    Term("python").
+    Or().
+    Term("javascript").
+    Execute()
+```
+
+#### NOT Query
+
+```go
+// Find documents with "python" but NOT "snake"
+results := blaze.NewQueryBuilder(idx).
+    Term("python").
+    And().Not().
+    Term("snake").
+    Execute()
+```
+
+#### Complex Grouped Query
+
+```go
+// (machine OR deep) AND learning
+results := blaze.NewQueryBuilder(idx).
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("machine").Or().Term("deep")
+    }).
+    And().
+    Term("learning").
+    Execute()
+```
+
+#### Phrase Query
+
+```go
+// Find exact phrase "machine learning"
+results := blaze.NewQueryBuilder(idx).
+    Phrase("machine learning").
+    Execute()
+```
+
+#### BM25 Ranked Results
+
+```go
+// Get top 10 results ranked by relevance
+matches := blaze.NewQueryBuilder(idx).
+    Term("machine").
+    And().
+    Term("learning").
+    ExecuteWithBM25(10)
+
+for _, match := range matches {
+    fmt.Printf("Doc %d: score=%.2f\n", match.DocID, match.Score)
+}
+```
+
+### Query Builder Core Methods
+
+#### `NewQueryBuilder(index *InvertedIndex) *QueryBuilder`
+
+Creates a new query builder instance.
+
+```go
+qb := blaze.NewQueryBuilder(idx)
+```
+
+#### `Term(term string) *QueryBuilder`
+
+Adds a single term to the query. Uses roaring bitmaps for O(1) document lookup.
+
+```go
+qb.Term("machine")
+```
+
+#### `Phrase(phrase string) *QueryBuilder`
+
+Adds an exact phrase match. Combines bitmap efficiency with skip list position checking.
+
+```go
+qb.Phrase("machine learning")
+```
+
+#### `And() *QueryBuilder`
+
+Combines results with intersection (both must match). Uses bitmap AND operation.
+
+```go
+qb.Term("machine").And().Term("learning")
+```
+
+#### `Or() *QueryBuilder`
+
+Combines results with union (either can match). Uses bitmap OR operation.
+
+```go
+qb.Term("cat").Or().Term("dog")
+```
+
+#### `Not() *QueryBuilder`
+
+Negates the next term (exclude from results). Uses bitmap difference operation.
+
+```go
+qb.Term("python").And().Not().Term("snake")
+```
+
+#### `Group(fn func(*QueryBuilder)) *QueryBuilder`
+
+Creates a sub-query with its own scope for precedence control.
+
+```go
+qb.Group(func(q *blaze.QueryBuilder) {
+    q.Term("machine").Or().Term("deep")
+}).And().Term("learning")
+```
+
+#### `Execute() *roaring.Bitmap`
+
+Executes the query and returns a bitmap of matching document IDs.
+
+```go
+results := qb.Execute()
+docCount := results.GetCardinality()
+```
+
+#### `ExecuteWithBM25(maxResults int) []Match`
+
+Executes the query with BM25 ranking and returns top results.
+
+```go
+matches := qb.ExecuteWithBM25(10)  // Top 10 results
+```
+
+### Boolean Operations
+
+The Query Builder provides convenient shorthand functions for common boolean operations:
+
+#### `AllOf(index *InvertedIndex, terms ...string) *roaring.Bitmap`
+
+Shorthand for documents containing ALL terms (AND operation).
+
+```go
+// Find documents with "machine" AND "learning" AND "python"
+results := blaze.AllOf(idx, "machine", "learning", "python")
+
+// Equivalent to:
+results := blaze.NewQueryBuilder(idx).
+    Term("machine").And().Term("learning").And().Term("python").
+    Execute()
+```
+
+#### `AnyOf(index *InvertedIndex, terms ...string) *roaring.Bitmap`
+
+Shorthand for documents containing ANY term (OR operation).
+
+```go
+// Find documents with "cat" OR "dog" OR "bird"
+results := blaze.AnyOf(idx, "cat", "dog", "bird")
+
+// Equivalent to:
+results := blaze.NewQueryBuilder(idx).
+    Term("cat").Or().Term("dog").Or().Term("bird").
+    Execute()
+```
+
+#### `TermExcluding(index *InvertedIndex, include string, exclude string) *roaring.Bitmap`
+
+Shorthand for term with exclusion (AND NOT operation).
+
+```go
+// Find documents with "python" but NOT "snake"
+results := blaze.TermExcluding(idx, "python", "snake")
+
+// Equivalent to:
+results := blaze.NewQueryBuilder(idx).
+    Term("python").And().Not().Term("snake").
+    Execute()
+```
+
+### Query Patterns
+
+#### Pattern 1: Broad to Narrow
+
+Start with a broad category, then filter down with specific criteria.
+
+```go
+// Find programming content about Python or JavaScript, excluding beginner material
+results := blaze.NewQueryBuilder(idx).
+    Term("programming").
+    And().
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("python").Or().Term("javascript")
+    }).
+    And().Not().
+    Term("beginner").
+    ExecuteWithBM25(10)
+```
+
+#### Pattern 2: Multi-Criteria Matching
+
+Match documents that satisfy multiple independent criteria.
+
+```go
+// Find documents about (machine learning OR deep learning) AND (python OR tensorflow)
+results := blaze.NewQueryBuilder(idx).
+    Group(func(q *blaze.QueryBuilder) {
+        q.Phrase("machine learning").Or().Phrase("deep learning")
+    }).
+    And().
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("python").Or().Term("tensorflow")
+    }).
+    ExecuteWithBM25(20)
+```
+
+#### Pattern 3: Exclusion Filtering
+
+Find relevant content while filtering out noise or unwanted categories.
+
+```go
+// Find "apple" content but exclude fruit/food related content
+results := blaze.NewQueryBuilder(idx).
+    Term("apple").
+    And().Not().
+    Group(func(q *blaze.QueryBuilder) {
+        q.Term("fruit").Or().Term("food").Or().Term("cooking")
+    }).
+    Execute()  // Finds "Apple Inc." not the fruit
+```
+
+#### Pattern 4: Category-Based Search
+
+Search within specific categories or tags.
+
+```go
+func SearchWithCategory(idx *blaze.InvertedIndex, query string, categories []string) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx)
+
+    // Add main query
+    qb.Term(query)
+
+    // Add category filter if provided
+    if len(categories) > 0 {
+        qb.And().Group(func(q *blaze.QueryBuilder) {
+            q.Term(categories[0])
+            for i := 1; i < len(categories); i++ {
+                q.Or().Term(categories[i])
+            }
+        })
+    }
+
+    return qb.ExecuteWithBM25(20)
+}
+```
+
+### Query Builder Performance
+
+The Query Builder leverages roaring bitmaps for exceptional performance on boolean operations.
+
+#### Benchmarks (Apple M2)
+
+```
+BenchmarkQueryBuilder_Simple-8       440,616 ops/sec    2,511 ns/op    896 B/op    39 allocs/op
+BenchmarkQueryBuilder_Complex-8      222,024 ops/sec    5,333 ns/op  2,240 B/op    98 allocs/op
+BenchmarkQueryBuilder_WithBM25-8     411,124 ops/sec    2,955 ns/op  1,416 B/op    46 allocs/op
+```
+
+#### Performance Benefits
+
+| Operation       | Complexity     | Why It's Fast               |
+| --------------- | -------------- | --------------------------- |
+| **AND**         | O(1) per chunk | Roaring bitmap intersection |
+| **OR**          | O(1) per chunk | Roaring bitmap union        |
+| **NOT**         | O(1) per chunk | Roaring bitmap difference   |
+| **Term Lookup** | O(1)           | Direct hash map access      |
+
+#### Compression Benefits
+
+For a term appearing in 500,000 documents:
+
+- Skip list positions: ~24 MB (500k nodes × 48 bytes)
+- Roaring bitmap: ~60 KB (400x compression!)
+
+### Query Builder Best Practices
+
+#### 1. Use Groups for Complex Logic
+
+```go
+// Good: Clear precedence with groups
+qb.Group(func(q *blaze.QueryBuilder) {
+    q.Term("a").Or().Term("b")
+}).And().Term("c")
+
+// Bad: Ambiguous without groups
+qb.Term("a").Or().Term("b").And().Term("c")  // Is this (a OR b) AND c or a OR (b AND c)?
+```
+
+#### 2. Leverage Convenience Functions for Simple Cases
+
+```go
+// Good: Clean and readable
+results := blaze.AllOf(idx, "python", "django", "web")
+
+// Bad: Verbose for simple case
+results := blaze.NewQueryBuilder(idx).
+    Term("python").And().Term("django").And().Term("web").
+    Execute()
+```
+
+#### 3. Use BM25 for User-Facing Searches
+
+```go
+// Good: Ranked results for users
+matches := qb.ExecuteWithBM25(10)
+
+// Bad: Unranked - harder for users to find relevant docs
+bitmap := qb.Execute()
+```
+
+#### 4. Combine Phrases and Terms Strategically
+
+```go
+// Good: Exact phrase + related term
+qb.Phrase("machine learning").And().Term("python")
+
+// Bad: Overly restrictive
+qb.Phrase("machine learning python")  // Requires exact phrase
+```
+
+#### 5. Build Queries Programmatically
+
+```go
+func BuildDynamicQuery(idx *blaze.InvertedIndex, required []string, optional []string, excluded []string) *roaring.Bitmap {
+    qb := blaze.NewQueryBuilder(idx)
+
+    // Add required terms (AND)
+    if len(required) > 0 {
+        qb.Term(required[0])
+        for i := 1; i < len(required); i++ {
+            qb.And().Term(required[i])
+        }
+    }
+
+    // Add optional terms (OR)
+    if len(optional) > 0 {
+        if len(required) > 0 {
+            qb.And()
+        }
+        qb.Group(func(q *blaze.QueryBuilder) {
+            q.Term(optional[0])
+            for i := 1; i < len(optional); i++ {
+                q.Or().Term(optional[i])
+            }
+        })
+    }
+
+    // Exclude terms (NOT)
+    for _, term := range excluded {
+        qb.And().Not().Term(term)
+    }
+
+    return qb.Execute()
+}
+```
+
+### Real-World Query Builder Examples
+
+#### Example 1: E-commerce Search with Filters
+
+```go
+func SearchProducts(idx *blaze.InvertedIndex, searchTerm string, category string, excludeOutOfStock bool) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx).Term(searchTerm)
+
+    // Add category filter
+    if category != "" {
+        qb.And().Term(category)
+    }
+
+    // Exclude out of stock items
+    if excludeOutOfStock {
+        qb.And().Not().Term("outofstock")
+    }
+
+    return qb.ExecuteWithBM25(20)
+}
+```
+
+#### Example 2: Multi-Category Search
+
+```go
+func SearchInCategories(idx *blaze.InvertedIndex, query string, categories []string) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx).Term(query)
+
+    if len(categories) > 0 {
+        qb.And().Group(func(q *blaze.QueryBuilder) {
+            q.Term(categories[0])
+            for i := 1; i < len(categories); i++ {
+                q.Or().Term(categories[i])
+            }
+        })
+    }
+
+    return qb.ExecuteWithBM25(50)
+}
+```
+
+#### Example 3: Content Filtering with Blocklist
+
+```go
+func FilterContent(idx *blaze.InvertedIndex, searchTerm string, blocklist []string) *roaring.Bitmap {
+    qb := blaze.NewQueryBuilder(idx).Term(searchTerm)
+
+    for _, blocked := range blocklist {
+        qb.And().Not().Term(blocked)
+    }
+
+    return qb.Execute()
+}
+```
+
+#### Example 4: Advanced Search with Multiple Phrases
+
+```go
+func AdvancedSearch(idx *blaze.InvertedIndex, phrases []string, requiredTerms []string) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx)
+
+    // Match any of the phrases (OR)
+    qb.Group(func(q *blaze.QueryBuilder) {
+        q.Phrase(phrases[0])
+        for i := 1; i < len(phrases); i++ {
+            q.Or().Phrase(phrases[i])
+        }
+    })
+
+    // AND with required terms
+    for _, term := range requiredTerms {
+        qb.And().Term(term)
+    }
+
+    return qb.ExecuteWithBM25(10)
+}
+
+// Usage:
+results := AdvancedSearch(idx,
+    []string{"machine learning", "deep learning"},
+    []string{"python", "tensorflow"})
+```
+
+#### Example 5: HTTP API Integration
+
+```go
+func SearchHandler(w http.ResponseWriter, r *http.Request) {
+    query := r.URL.Query().Get("q")
+    category := r.URL.Query().Get("category")
+    exclude := r.URL.Query().Get("exclude")
+
+    qb := blaze.NewQueryBuilder(index).Term(query)
+
+    if category != "" {
+        qb.And().Term(category)
+    }
+
+    if exclude != "" {
+        qb.And().Not().Term(exclude)
+    }
+
+    results := qb.ExecuteWithBM25(20)
+    json.NewEncoder(w).Encode(results)
+}
+```
+
+#### Example 6: Semantic-Style Search
+
+```go
+func SemanticSearch(idx *blaze.InvertedIndex, concept string, relatedTerms []string) []blaze.Match {
+    qb := blaze.NewQueryBuilder(idx)
+
+    // Main concept OR any related terms
+    qb.Term(concept)
+    for _, related := range relatedTerms {
+        qb.Or().Term(related)
+    }
+
+    return qb.ExecuteWithBM25(50)
+}
+
+// Usage:
+results := SemanticSearch(idx, "automobile",
+    []string{"car", "vehicle", "transportation", "automotive"})
+```
 
 ## API Reference
 
@@ -2076,15 +2634,382 @@ func TestSearchFunctionality(t *testing.T) {
 
 ```
 blaze/
-├── index.go          # Inverted index implementation
-├── skiplist.go       # Skip list data structure
-├── search.go         # Search algorithms (phrase, proximity)
+├── index.go          # Inverted index implementation with hybrid storage
+├── query.go          # Query builder with roaring bitmaps
+├── skiplist.go       # Skip list data structure for positions
+├── search.go         # Search algorithms (phrase, proximity, BM25)
 ├── analyzer.go       # Text analysis pipeline
-├── serialization.go  # Binary encoding/decoding
+├── serialization.go  # Binary encoding/decoding (skip lists + bitmaps)
 ├── *_test.go         # Comprehensive test suite
 ├── Makefile          # Development commands
 └── public/           # Documentation website
     └── index.html
+```
+
+### Query Processor Architecture
+
+The query processor uses a hybrid storage approach combining roaring bitmaps for document-level operations and skip lists for position-level operations.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      QUERY PROCESSOR ARCHITECTURE                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              User Query
+                          "machine AND learning"
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │    Text Analyzer            │
+                    │  (tokenize, stem, etc.)     │
+                    └──────────────┬──────────────┘
+                                  │
+                    ["machine", "learning"]
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │     Query Builder           │
+                    │  (constructs query tree)    │
+                    └──────────────┬──────────────┘
+                                  │
+                    Query Tree: AND(machine, learning)
+                                  │
+            ┌─────────────────────┼─────────────────────┐
+            │                     │                     │
+            ▼                     ▼                     ▼
+    ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+    │  Bitmap Ops   │    │  Skip List    │    │  BM25 Scorer  │
+    │  (fast AND/OR)│    │  (positions)  │    │  (ranking)    │
+    └───────┬───────┘    └───────┬───────┘    └───────┬───────┘
+            │                     │                     │
+            └─────────────────────┼─────────────────────┘
+                                  │
+                                  ▼
+                          ┌───────────────┐
+                          │    Results    │
+                          │  (ranked docs)│
+                          └───────────────┘
+```
+
+### Hybrid Storage Architecture
+
+Blaze uses a sophisticated hybrid storage model:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        HYBRID STORAGE MODEL                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+For each term "machine":
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  DOCUMENT LEVEL (Roaring Bitmap)                                        │
+│  ────────────────────────────────────────────────────────────────────── │
+│                                                                           │
+│  DocBitmaps["machine"] = {1, 2, 4, 5, 100, 500, 1000, ...}             │
+│                                                                           │
+│  Compressed representation of ALL documents containing "machine"         │
+│  Use: Fast boolean operations (AND, OR, NOT)                            │
+│  Size: ~60 KB for 500k documents (400x compression!)                    │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  │ Links to
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  POSITION LEVEL (Skip List)                                             │
+│  ────────────────────────────────────────────────────────────────────── │
+│                                                                           │
+│  PostingsList["machine"] = SkipList:                                    │
+│                                                                           │
+│    Level 2: [Doc1:Pos5] ────────────────────────> [Doc100:Pos12]       │
+│                 │                                       │                │
+│    Level 1: [Doc1:Pos5] ──> [Doc2:Pos3] ───────────> [Doc100:Pos12]   │
+│                 │              │                         │               │
+│    Level 0: [Doc1:Pos5] -> [Doc2:Pos3] -> [Doc4:Pos1] -> [Doc5:Pos7]  │
+│             -> [Doc100:Pos12] -> [Doc500:Pos2] -> ...                  │
+│                                                                           │
+│  Detailed position information for EVERY occurrence                      │
+│  Use: Phrase search, proximity ranking, snippets                        │
+│  Size: ~24 MB for 500k positions                                        │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+WHY HYBRID?
+───────────
+1. Bitmaps: Lightning-fast document filtering (AND, OR, NOT in microseconds)
+2. Skip Lists: Precise position tracking for phrases and proximity
+3. Best of both worlds: Speed + Precision
+```
+
+### Query Execution Flow
+
+Here's how a complex query executes step-by-step:
+
+```
+QUERY: (machine OR deep) AND learning AND NOT neural
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  STEP 1: BITMAP PHASE (Fast Document Filtering)                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Term Lookups (O(1) hash map):
+    DocBitmaps["machine"] = {1, 2, 4, 5, 7, 8, 9, 10}
+    DocBitmaps["deep"]    = {2, 3, 5, 6, 8, 9}
+    DocBitmaps["learning"]= {1, 2, 4, 5, 6, 7, 8, 9, 10}
+    DocBitmaps["neural"]  = {3, 6, 8, 9}
+
+Boolean Operations (O(1) per chunk):
+    Step 1: machine OR deep
+            {1, 2, 4, 5, 7, 8, 9, 10} ∪ {2, 3, 5, 6, 8, 9}
+          = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+    Step 2: (machine OR deep) AND learning
+            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} ∩ {1, 2, 4, 5, 6, 7, 8, 9, 10}
+          = {1, 2, 4, 5, 6, 7, 8, 9, 10}
+
+    Step 3: Result AND NOT neural
+            {1, 2, 4, 5, 6, 7, 8, 9, 10} \ {3, 6, 8, 9}
+          = {1, 2, 4, 5, 7, 10}  ← CANDIDATE DOCUMENTS
+
+    Time: ~10 microseconds for 1M documents!
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  STEP 2: POSITION PHASE (Optional - for phrases/proximity)              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+IF phrase search needed:
+    For each candidate doc {1, 2, 4, 5, 7, 10}:
+        Use skip lists to verify exact positions
+        Check consecutive positions for phrases
+        Extract position data for snippets
+
+    Time: O(log n) per position lookup
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  STEP 3: RANKING PHASE (BM25 Scoring)                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+For each candidate document:
+    1. Calculate IDF (Inverse Document Frequency):
+       - Uses bitmap cardinality for instant document counts
+       - IDF("machine") = log((N - df + 0.5) / (df + 0.5))
+       - df = DocBitmaps["machine"].GetCardinality()
+
+    2. Calculate TF (Term Frequency):
+       - Retrieves from pre-computed DocStats
+       - TF("machine", Doc1) = termFreqs["machine"]
+
+    3. Apply BM25 formula:
+       - Combines IDF, TF, and length normalization
+       - Score = IDF × (TF × (k1 + 1)) / (TF + k1 × length_norm)
+
+    4. Sum scores for all query terms
+
+Results sorted by score:
+    Doc 5: 8.45
+    Doc 2: 7.23
+    Doc 1: 6.91
+    ...
+
+    Time: O(candidates × terms)
+```
+
+### Data Structure Memory Layout
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    INVERTED INDEX STRUCTURE                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+InvertedIndex {
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  DocBitmaps: map[string]*roaring.Bitmap                         │
+    │  ───────────────────────────────────────────────────────────────│
+    │  "machine"  → [Compressed Bitmap: 512 bytes]                    │
+    │  "learning" → [Compressed Bitmap: 448 bytes]                    │
+    │  "deep"     → [Compressed Bitmap: 256 bytes]                    │
+    │  ...                                                             │
+    │                                                                  │
+    │  Memory: ~100 bytes per term (compressed)                       │
+    └─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Parallel Storage
+                              ▼
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  PostingsList: map[string]SkipList                              │
+    │  ───────────────────────────────────────────────────────────────│
+    │  "machine"  → SkipList with 10,000 position nodes               │
+    │  "learning" → SkipList with 8,000 position nodes                │
+    │  "deep"     → SkipList with 5,000 position nodes                │
+    │  ...                                                             │
+    │                                                                  │
+    │  Memory: ~48 bytes per position (node overhead)                 │
+    └─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Statistics
+                              ▼
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  DocStats: map[int]DocumentStats                                │
+    │  ───────────────────────────────────────────────────────────────│
+    │  Doc1 → {Length: 150, TermFreqs: {"machine": 3, ...}}          │
+    │  Doc2 → {Length: 200, TermFreqs: {"learning": 5, ...}}         │
+    │  ...                                                             │
+    │                                                                  │
+    │  Memory: ~16 bytes per term per document                        │
+    └─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Metadata
+                              ▼
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  Global Statistics                                               │
+    │  ───────────────────────────────────────────────────────────────│
+    │  TotalDocs:   1,000,000                                         │
+    │  TotalTerms:  150,000,000                                       │
+    │  AvgDocLen:   150.0                                             │
+    │  BM25Params:  {K1: 1.5, B: 0.75}                               │
+    └─────────────────────────────────────────────────────────────────┘
+
+    Mutex for thread safety (sync.RWMutex)
+}
+
+MEMORY BREAKDOWN (for 1M documents, 10M unique positions):
+────────────────────────────────────────────────────────────
+DocBitmaps:     ~10 MB  (compressed bitmaps)
+PostingsList:   ~480 MB (skip list nodes)
+DocStats:       ~500 MB (per-doc statistics)
+Overhead:       ~10 MB  (maps, pointers, etc.)
+────────────────────────────────────────────────────────────
+TOTAL:          ~1 GB
+```
+
+### Roaring Bitmap Internals
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ROARING BITMAP STRUCTURE                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Document IDs: {1, 2, 3, 100, 101, 102, 500000, 500001, 999999}
+
+Traditional Bitmap (naive):
+    [1,1,1,0,0...0,1,1,1,0...0,1,1,0...0,1]
+    Size: 1,000,000 bits = 125 KB (wasteful for sparse data)
+
+Roaring Bitmap (smart):
+
+    Split into 65,536 chunks (high 16 bits = chunk ID):
+
+    Chunk 0 (docs 0-65535):      [1,2,3,100,101,102]
+    Chunk 7 (docs 458752-524287): [500000, 500001]
+    Chunk 15 (docs 983040-1048575): [999999]
+
+    Storage per chunk (adaptive):
+    ┌────────────────────────────────────────────────────┐
+    │ If cardinality < 4096:                             │
+    │   → Use Array Container                            │
+    │   → Store sorted uint16 values directly            │
+    │   → Size: 2 bytes × cardinality                    │
+    │                                                     │
+    │ If cardinality > 4096:                             │
+    │   → Use Bitmap Container                           │
+    │   → Store 65536-bit bitmap (8 KB)                 │
+    │   → Size: 8 KB fixed                               │
+    │                                                     │
+    │ If cardinality = 65536 (all docs):                │
+    │   → Use Run Container                              │
+    │   → Store: [0-65535]                               │
+    │   → Size: 4 bytes                                  │
+    └────────────────────────────────────────────────────┘
+
+    Total Size: ~60 bytes (vs 125 KB!)
+
+    Operations:
+
+    AND: Container-by-container intersection
+         Skip non-matching chunks (O(1))
+         Intersect matching chunks (O(min(n,m)))
+
+    OR:  Container-by-container union
+         Merge all chunks (O(n+m))
+
+    NOT: Complement within document space
+         Flip all bits in each chunk
+```
+
+### Query Builder Execution Model
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   QUERY BUILDER EXECUTION MODEL                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Query: NewQueryBuilder(idx).
+         Group(func(q) { q.Term("machine").Or().Term("deep") }).
+         And().
+         Term("learning").
+         Execute()
+
+INTERNAL REPRESENTATION:
+────────────────────────
+
+QueryBuilder {
+    stack: []*roaring.Bitmap       // Operand stack
+    ops:   []QueryOp               // Operator stack
+    terms: []string                // Track for BM25
+}
+
+EXECUTION TRACE:
+────────────────
+
+Step 1: Group(func(q) { ... })
+    ┌──────────────────────────────────────┐
+    │ Create sub-builder                    │
+    │ Execute sub-query                     │
+    │ Push result bitmap to parent stack    │
+    └──────────────────────────────────────┘
+
+    Sub-query execution:
+      1.1: Term("machine")
+           → Lookup: DocBitmaps["machine"]
+           → Push: {1,2,4,5,7,8,9,10}
+
+      1.2: Or()
+           → Push operator: OR
+
+      1.3: Term("deep")
+           → Lookup: DocBitmaps["deep"]
+           → Push: {2,3,5,6,8,9}
+
+      1.4: Apply OR
+           → Pop: {2,3,5,6,8,9}
+           → Pop: {1,2,4,5,7,8,9,10}
+           → Union: {1,2,3,4,5,6,7,8,9,10}
+           → Push result
+
+    Result: {1,2,3,4,5,6,7,8,9,10}
+
+Step 2: And()
+    → Push operator: AND
+
+Step 3: Term("learning")
+    → Lookup: DocBitmaps["learning"]
+    → Push: {1,2,4,5,6,7,8,9,10}
+
+Step 4: Execute()
+    → Pop: {1,2,4,5,6,7,8,9,10}
+    → Pop: {1,2,3,4,5,6,7,8,9,10}
+    → Intersect: {1,2,4,5,6,7,8,9,10}
+    → Return final bitmap
+
+OPERATION COSTS:
+────────────────
+Bitmap Lookup:    O(1)          ~100 ns
+Bitmap Union:     O(n+m)        ~1 µs for 10k docs
+Bitmap Intersect: O(min(n,m))   ~800 ns for 10k docs
+Bitmap Difference: O(n)         ~900 ns for 10k docs
+
+Total Query Time: ~10 µs for typical query!
 ```
 
 ### Data Flow
