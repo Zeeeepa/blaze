@@ -376,6 +376,17 @@ Document 1 (score: 0.50)</code></pre>
           └─────────┴────────────────────────────────────┘
         </div>
 
+        <p><strong>Visual Representation:</strong></p>
+        <div class="ascii-art">
+          Inverted Index ┌──────────┐ │ Map │ │ [string] │ │ SkipList │
+          └────┬─────┘ │ ┌────────────────┼────────────────┐ │ │ │ ▼ ▼ ▼ "quick"
+          "brown" "fox" SkipList SkipList SkipList ┌──────┐ ┌──────┐ ┌──────┐ │
+          HEAD │ │ HEAD │ │ HEAD │ └──┬───┘ └──┬───┘ └──┬───┘ │ │ │ ▼ ▼ ▼
+          ┌──────┐ ┌──────┐ ┌──────┐ │Doc1:1│ │Doc1:2│ │Doc1:3│ └──┬───┘
+          └──┬───┘ └──────┘ │ │ ▼ ▼ ┌──────┐ ┌──────┐ │Doc3:0│ │Doc3:1│ └──────┘
+          └──────┘
+        </div>
+
         <p><strong>Benefits:</strong></p>
         <ul>
           <li>Instant term lookups (no document scanning)</li>
@@ -392,11 +403,51 @@ Document 1 (score: 0.50)</code></pre>
         </p>
 
         <div class="ascii-art">
-          Level 3: HEAD ──────────────────────────────────> [30] ──────> NULL ↓
-          ↓ Level 2: HEAD ──────────────────> [15] ──────────────> [30] ──────>
+          Skip List with Multiple Levels (Express Lanes)
+          ═══════════════════════════════════════════════════════════════ Level
+          3: HEAD ────────────────────────────────────────> [30] ──────> NULL ↓
+          ↓ Level 2: HEAD ───────────────────> [15] ─────────────> [30] ──────>
           NULL ↓ ↓ ↓ Level 1: HEAD ──────> [10] ──────> [15] ──────> [20] ─>
           [30] ──────> NULL ↓ ↓ ↓ ↓ ↓ Level 0: HEAD → [5] → [10] → [15] → [20] →
-          [25] → [30] → [35] → NULL
+          [25] → [30] → [35] → NULL (ALL NODES AT LEVEL 0)
+        </div>
+
+        <div class="highlight-box">
+          <p><strong>Node Structure:</strong></p>
+          <div class="ascii-art">
+            ┌───────┐ │ Node │ Each node has a "tower" of forward pointers
+            ├───────┤ │ Key │ Example: Node [15] ├───────┤ │ Lvl 3 │ ──> [30]
+            (skip far ahead) │ Lvl 2 │ ──> [30] (skip ahead) │ Lvl 1 │ ──> [20]
+            (skip a little) │ Lvl 0 │ ──> [20] (next node) └───────┘
+          </div>
+        </div>
+
+        <p><strong>How Heights are Assigned (Probabilistic):</strong></p>
+        <div class="ascii-art">
+          Coin Flip Algorithm: ┌─────────┬─────────────┬─────────────┐ │ Height
+          │ Probability │ Visual │ ├─────────┼─────────────┼─────────────┤ │ 1 │
+          50% │ ▓▓▓▓▓ │ │ 2 │ 25% │ ▓▓▓ │ │ 3 │ 12.5% │ ▓▓ │ │ 4 │ 6.25% │ ▓ │
+          └─────────┴─────────────┴─────────────┘ For 1000 nodes, expected
+          distribution: Level 0: ~1000 nodes (all)
+          ████████████████████████████████████████ Level 1: ~500 nodes
+          ████████████████████ Level 2: ~250 nodes ██████████ Level 3: ~125
+          nodes █████ Level 4: ~62 nodes ██
+        </div>
+
+        <p><strong>Search Algorithm Example</strong> (finding 20):</p>
+        <div class="ascii-art">
+          Step-by-Step Search for Key = 20: Level 3: [HEAD]
+          ───────────────────────────────> [30] (30 > 20, drop down) ↓ Level 2:
+          [HEAD] ──────────────> [15] ─────────> [30] (15 < 20, advance) ↓ Level
+          2: [15] ─────────> [30] (30 > 20, drop down) ↓ Level 1: [15] ──> [20]
+          (20 = 20, FOUND!) ^^^^ Journey Recorded:
+          ┌───────────┬─────────────────┐ │ Level 3 │ HEAD │ Predecessor at each
+          level │ Level 2 │ [15] │ Used for insertions/deletions │ Level 1 │
+          [15] │ │ Level 0 │ [15] │ └───────────┴─────────────────┘ Steps: 1.
+          Start at HEAD, Level 3 2. Level 3: Move to 30? No (30 > 20), drop to
+          Level 2 3. Level 2: Move to 15? Yes (15 < 20), advance to 15 4. Level
+          2: Move to 30? No (30 > 20), drop to Level 1 5. Level 1: Move to 20?
+          Yes! Found it! Time Complexity: O(log n) on average
         </div>
 
         <p><strong>Why Skip Lists?</strong></p>
@@ -415,9 +466,13 @@ Document 1 (score: 0.50)</code></pre>
         </p>
 
         <div class="ascii-art">
-          ┌────────────────────────────────────────┐ │ 1. Tokenization │ │ Split
-          on non-alphanumeric chars │ └────────────────┬───────────────────────┘
-          ▼ ┌────────────────────────────────────────┐ │ 2. Lowercasing │ │
+          ┌─────────────────────────────────────────────────────────────────────┐
+          │ Text Analysis Pipeline │
+          └─────────────────────────────────────────────────────────────────────┘
+          │ ▼ ┌────────────────────────────────────────┐ │ 1. Tokenization │ │
+          Split on non-alphanumeric chars │
+          └────────────────┬───────────────────────┘ ▼
+          ┌────────────────────────────────────────┐ │ 2. Lowercasing │ │
           Normalize case ("Quick" → "quick") │
           └────────────────┬───────────────────────┘ ▼
           ┌────────────────────────────────────────┐ │ 3. Stopword Filtering │ │
@@ -432,12 +487,15 @@ Document 1 (score: 0.50)</code></pre>
 
         <div class="highlight-box">
           <p><strong>Example Transformation:</strong></p>
-          <code>Input: "The Quick Brown Fox Jumps!"</code><br />
-          <code>Step 1: ["The", "Quick", "Brown", "Fox", "Jumps"]</code><br />
-          <code>Step 2: ["the", "quick", "brown", "fox", "jumps"]</code><br />
-          <code>Step 3: ["quick", "brown", "fox", "jumps"]</code><br />
-          <code>Step 4: ["quick", "brown", "fox", "jumps"]</code><br />
-          <code>Step 5: ["quick", "brown", "fox", "jump"]</code>
+          <div class="ascii-art">
+            Input: "The Quick Brown Fox Jumps!" │ ├─ Step 1: Tokenization │ └─>
+            ["The", "Quick", "Brown", "Fox", "Jumps"] │ ├─ Step 2: Lowercasing │
+            └─> ["the", "quick", "brown", "fox", "jumps"] │ ├─ Step 3: Stopword
+            Filtering (remove "the") │ └─> ["quick", "brown", "fox", "jumps"] │
+            ├─ Step 4: Length Filtering (all pass >= 2 chars) │ └─> ["quick",
+            "brown", "fox", "jumps"] │ └─ Step 5: Stemming ("jumps" → "jump")
+            └─> ["quick", "brown", "fox", "jump"]
+          </div>
         </div>
       </section>
 
@@ -471,7 +529,67 @@ for _, match := range matches {
         int(start.DocumentID), int(start.Offset), int(end.Offset))
 }</code></pre>
 
-        <h3>3. Proximity Ranking</h3>
+        <p><strong>Phrase Search Algorithm:</strong></p>
+        <div class="ascii-art">
+          Searching for phrase: "brown fox" Document: "the quick brown dog
+          jumped over the brown fox" Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find
+          END (last word "fox")
+          ┌─────────────────────────────────────────────────────────┐ │ Find
+          "brown" → Doc:Pos2 │ │ Find "fox" after Pos2 → Doc:Pos8 ← END position
+          │ └─────────────────────────────────────────────────────────┘ Phase 2:
+          Walk BACKWARDS from END to find START
+          ┌─────────────────────────────────────────────────────────┐ │ From
+          Pos9, find previous "brown" → Doc:Pos7 ← START │
+          └─────────────────────────────────────────────────────────┘ Phase 3:
+          Validate ┌─────────────────────────────────────────────────────────┐ │
+          Start: Pos7, End: Pos8 │ │ Distance: 8 - 7 = 1 │ │ Expected: 2 words -
+          1 = 1 ✓ MATCH! │ │ │ │ "brown" "fox" │ │ ▲ ▲ │ │ Pos7 Pos8
+          (consecutive positions) │
+          └─────────────────────────────────────────────────────────┘ Steps: 1.
+          Find END: Locate the last word of the phrase 2. Walk BACKWARDS: Find
+          previous occurrences of earlier words 3. Validate: Check if positions
+          are consecutive 4. Recurse: Continue searching for more matches
+        </div>
+
+        <h3>3. Proximity Search</h3>
+        <p>
+          Find documents containing all terms (not necessarily consecutive):
+        </p>
+        <pre><code class="language-go">// Find documents with both "quick" and "fox"
+cover := idx.NextCover([]string{"quick", "fox"}, blaze.BOFDocument)
+start, end := cover[0], cover[1]
+
+// Calculate proximity score
+distance := end.Offset - start.Offset
+score := 1.0 / distance  // Closer terms = higher score</code></pre>
+
+        <p><strong>Cover Algorithm:</strong></p>
+        <div class="ascii-art">
+          Searching for: ["quick", "fox"] (any order, not necessarily
+          consecutive) Document: "the quick brown dog jumped over the lazy fox"
+          Positions: 0 1 2 3 4 5 6 7 8 Phase 1: Find COVER END (furthest term)
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Find "quick" after BOF → Doc:Pos1 │ │ Find "fox" after BOF → Doc:Pos8
+          ← FURTHEST (cover end) │
+          └──────────────────────────────────────────────────────────────┘ Phase
+          2: Find COVER START (earliest term before end)
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Find "quick" before Pos9 → Doc:Pos1 ← EARLIEST (cover start)│ │ Find
+          "fox" before Pos9 → Doc:Pos8 │
+          └──────────────────────────────────────────────────────────────┘ Phase
+          3: Validate & Return
+          ┌──────────────────────────────────────────────────────────────┐ │
+          Cover: [Pos1, Pos8] │ │ Same document? ✓ │ │ All terms present? ✓ │ │
+          │ │ "quick" ... ... ... ... ... ... ... "fox" │ │ ▲ ▲ │ │ Pos1 Pos8 │
+          │ └────────── Cover Range ──────────────┘ │ │ │ │ Proximity Score: 1 /
+          (8 - 1 + 1) = 1/8 = 0.125 │
+          └──────────────────────────────────────────────────────────────┘
+          Steps: 1. Find FURTHEST occurrence of any term (cover end) 2. Find
+          EARLIEST occurrence of each term before end (cover start) 3. Validate
+          all terms are in the same document 4. Return [start, end] positions
+        </div>
+
+        <h3>4. Proximity Ranking</h3>
         <p>Score and rank documents by term proximity:</p>
         <pre><code class="language-go">// Search and rank results
 matches := idx.RankProximity("machine learning", 10)
@@ -488,11 +606,32 @@ for _, match := range matches {
             For each cover in a document:<br />
             <code>score += 1 / (coverEnd - coverStart + 1)</code>
           </p>
-          <p>
-            Smaller distances → larger scores<br />
-            Multiple occurrences → higher scores<br />
-            Documents with terms close together rank higher
-          </p>
+        </div>
+
+        <p><strong>Proximity Scoring Examples:</strong></p>
+        <div class="ascii-art">
+          ┌────────────────────────────────────────────────────────────────┐ │
+          Proximity Scoring Examples │
+          ├────────────────────────────────────────────────────────────────┤ │ │
+          │ Doc 1: "machine learning is machine learning" │ │ Pos:0 1 2 3 4 │ │
+          │ │ Cover 1: [Pos 0-1] → score += 1/(1-0+1) = 1/2 = 0.500 │ │ Cover 2:
+          [Pos 3-4] → score += 1/(4-3+1) = 1/2 = 0.500 │ │
+          ───────────────────────────── │ │ Total Score: 1.000 │ │ │
+          ├────────────────────────────────────────────────────────────────┤ │ │
+          │ Doc 2: "learning about machine and learning" │ │ Pos:0 1 2 3 4 │ │ │
+          │ Cover 1: [Pos 0-2] → score += 1/(2-0+1) = 1/3 = 0.333 │ │ Cover 2:
+          [Pos 2-4] → score += 1/(4-2+1) = 1/3 = 0.333 │ │
+          ───────────────────────────── │ │ Total Score: 0.666 │ │ │
+          ├────────────────────────────────────────────────────────────────┤ │ │
+          │ Doc 3: "machine ... ... ... ... learning" │ │ Pos:0 1 2 3 4 5 │ │ │
+          │ Cover 1: [Pos 0-5] → score += 1/(5-0+1) = 1/6 = 0.167 │ │
+          ───────────────────────────── │ │ Total Score: 0.167 │ │ │
+          └────────────────────────────────────────────────────────────────┘
+          Ranking: Doc 1 (1.000) > Doc 2 (0.666) > Doc 3 (0.167) ▲ ▲ ▲ Terms
+          closest Terms medium Terms far apart Why This Works: - Smaller
+          distances → larger scores (inverse relationship) - Multiple
+          occurrences → higher scores (additive) - Documents with terms close
+          together rank higher
         </div>
       </section>
 
@@ -766,6 +905,47 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
 └── public/           # Documentation website
     └── index.html</code></pre>
 
+        <h3>Data Flow</h3>
+        <p>Complete data flow from user input to ranked search results:</p>
+        <div class="ascii-art">
+          ┌──────────────────────────────────────────────────────────────────────┐
+          │ Complete Data Flow │
+          └──────────────────────────────────────────────────────────────────────┘
+          User Input "The Quick Brown Fox!" │ ▼
+          ┌───────────────────────────────────────────┐ │ Text Analysis Pipeline
+          │ │ ┌─────────────────────────────────────┐ │ │ │ 1. Tokenization │ │
+          │ │ ["The", "Quick", "Brown", "Fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 2. Lowercasing │ │ │ │
+          ["the", "quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 3. Stopword Filtering │
+          │ │ │ ["quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 4. Length Filtering │ │
+          │ │ ["quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │ │ ▼ │ │
+          ┌─────────────────────────────────────┐ │ │ │ 5. Stemming │ │ │ │
+          ["quick", "brown", "fox"] │ │ │
+          └────────────┬────────────────────────┘ │
+          └───────────────┼────────────────────────────┘ ▼ ["quick", "brown",
+          "fox"] │ ▼ ┌───────────────────────────────────────────┐ │ Inverted
+          Index (Indexing) │ │ │ │ ┌─────────┬────────────────────────┐ │ │ │
+          "quick" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos0] │ │ │
+          ├─────────┼────────────────────────┤ │ │ │ "brown" │ → SkipList │ │ │
+          │ │ └─> [Doc1:Pos1] │ │ │ ├─────────┼────────────────────────┤ │ │ │
+          "fox" │ → SkipList │ │ │ │ │ └─> [Doc1:Pos2] │ │ │
+          └─────────┴────────────────────────┘ │
+          └───────────────┬───────────────────────────┘ │
+          ┌─────────────────┴─────────────────┐ │ Search Operations │ ▼ ▼
+          ┌──────────┐ ┌────────────┐ │ Term │ │ Phrase │ │ Search │ │ Search │
+          └────┬─────┘ └─────┬──────┘ │ │ └──────────┬───────────────────────┘ ▼
+          ┌───────────────┐ │ Proximity │ │ Ranking │ └───────┬───────┘ │ ▼
+          ┌───────────────────────┐ │ Ranked Results │ │ ┌─────────────────┐ │ │
+          │ Doc 1: Score 1.0│ │ │ │ Doc 2: Score 0.5│ │ │ │ Doc 3: Score 0.3│ │
+          │ └─────────────────┘ │ └───────────────────────┘
+        </div>
+
         <h3>Key Design Decisions</h3>
 
         <h4>1. Skip Lists over Balanced Trees</h4>
@@ -774,6 +954,7 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
           <li>Better cache locality</li>
           <li>Easier to make concurrent</li>
           <li>Comparable performance (O(log n))</li>
+          <li>Used in production systems (Redis, LevelDB)</li>
         </ul>
 
         <h4>2. Position-Based Indexing</h4>
@@ -781,11 +962,28 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
           Instead of just tracking document IDs, Blaze tracks exact word
           positions, enabling:
         </p>
+        <div class="ascii-art">
+          Traditional Index (Document IDs only): ┌─────────┬──────────────────┐
+          │ "quick" │ [Doc1, Doc3] │ ✗ Can't do phrase search
+          └─────────┴──────────────────┘ ✗ Can't rank by proximity
+          Position-Based Index (Document + Offset):
+          ┌─────────┬────────────────────────────────────┐ │ "quick" │
+          [Doc1:Pos1, Doc3:Pos0] │ ✓ Phrase search │ "brown" │ [Doc1:Pos2,
+          Doc3:Pos1] │ ✓ Proximity ranking │ "fox" │ [Doc1:Pos3] │ ✓ Snippet
+          generation └─────────┴────────────────────────────────────┘ ✓ Precise
+          results Can verify: "quick brown" is a phrase in Doc1 (Pos1→Pos2) but
+          NOT in Doc3 (Pos0 and Pos1 are not "quick brown")
+        </div>
         <ul>
           <li>Phrase search (check consecutive positions)</li>
           <li>Proximity ranking (measure distances)</li>
           <li>Snippet generation (extract relevant parts)</li>
           <li>More precise search results</li>
+        </ul>
+        <p><strong>Trade-offs:</strong></p>
+        <ul>
+          <li>Larger index size (~2-3x more data)</li>
+          <li>More complex algorithms (but still O(log n))</li>
         </ul>
 
         <h4>3. Binary Serialization</h4>
@@ -793,6 +991,7 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
           <li>60% smaller file size compared to JSON</li>
           <li>3x faster parsing</li>
           <li>Preserves skip list structure</li>
+          <li>Suitable for large indexes</li>
         </ul>
       </section>
 
