@@ -3,7 +3,7 @@
 <div align="center">
   <img alt="image" src="./media/image.png" />
   <p>
-    <a href="wizenheimer.github.io/blaze"><strong>Docs </strong> </a>
+    <a href="https://wizenheimer.github.io/blaze/"><strong>Docs </strong> </a>
   </p>
 </div>
 
