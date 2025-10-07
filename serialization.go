@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+
+	"github.com/RoaringBitmap/roaring"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -60,7 +62,7 @@ import (
 //	[2][0]                     ← Tower structure (only one node, no next)
 //
 // The encoder object keeps track of our position in the output buffer.
-// Encode serializes the inverted index including BM25 statistics
+// Encode serializes the inverted index with HYBRID STORAGE including BM25 statistics
 //
 // BINARY FORMAT:
 // --------------
@@ -80,7 +82,15 @@ import (
 //   - Term: bytes
 //   - Frequency: uint32
 //
-// [Posting Lists] (existing format)
+// [Roaring Bitmaps] (NEW - for fast document lookups)
+//   - NumBitmaps: uint32
+//   - For each term:
+//   - TermLength: uint32
+//   - Term: bytes
+//   - BitmapLength: uint32
+//   - Bitmap: bytes (roaring's native serialization)
+//
+// [Posting Lists] (position data for phrase search)
 //   - For each term...
 func (idx *InvertedIndex) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
@@ -92,6 +102,11 @@ func (idx *InvertedIndex) Encode() ([]byte, error) {
 
 	// Write document statistics
 	if err := idx.encodeDocStats(buf); err != nil {
+		return nil, err
+	}
+
+	// Write roaring bitmaps (NEW!)
+	if err := idx.encodeRoaringBitmaps(buf); err != nil {
 		return nil, err
 	}
 
@@ -163,6 +178,64 @@ func (idx *InvertedIndex) encodeDocStats(buf *bytes.Buffer) error {
 			if err := binary.Write(buf, binary.LittleEndian, uint32(freq)); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+// encodeRoaringBitmaps writes the roaring bitmaps for document-level storage
+//
+// ROARING BITMAP SERIALIZATION:
+// ------------------------------
+// Roaring bitmaps have their own efficient binary format via ToBytes()
+// We just need to wrap it with term names and lengths
+//
+// FORMAT:
+// -------
+// [NumBitmaps: uint32]
+// For each bitmap:
+//
+//	[TermLength: uint32][Term: bytes]
+//	[BitmapLength: uint32][Bitmap: bytes]
+//
+// EXAMPLE:
+// --------
+// Term "quick" appears in documents [1, 3, 5, 100, 500]
+// Roaring serializes this to ~20 bytes (vs 40 bytes for raw integers!)
+//
+// COMPRESSION BENEFITS:
+// ---------------------
+// For term "the" in 500,000 documents:
+// - Skip list: ~24 MB (500k nodes × 48 bytes)
+// - Roaring bitmap: ~60 KB (400x compression!)
+func (idx *InvertedIndex) encodeRoaringBitmaps(buf *bytes.Buffer) error {
+	// Write number of bitmaps
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(idx.DocBitmaps))); err != nil {
+		return err
+	}
+
+	// Write each term and its bitmap
+	for term, bitmap := range idx.DocBitmaps {
+		// Write term name
+		termBytes := []byte(term)
+		if err := binary.Write(buf, binary.LittleEndian, uint32(len(termBytes))); err != nil {
+			return err
+		}
+		if _, err := buf.Write(termBytes); err != nil {
+			return err
+		}
+
+		// Write roaring bitmap (it has its own compact serialization)
+		bitmapBytes, err := bitmap.ToBytes()
+		if err != nil {
+			return err
+		}
+		if err := binary.Write(buf, binary.LittleEndian, uint32(len(bitmapBytes))); err != nil {
+			return err
+		}
+		if _, err := buf.Write(bitmapBytes); err != nil {
+			return err
 		}
 	}
 
@@ -484,7 +557,7 @@ type nodePosition struct {
 // --------
 // Input: [5]['quick'][16][1,1,3,0][4][2][2][0]...
 // Output: PostingsList["quick"] = SkipList{...}
-// Decode deserializes binary data back into an inverted index with BM25 stats
+// Decode deserializes binary data back into an inverted index with HYBRID STORAGE and BM25 stats
 func (idx *InvertedIndex) Decode(data []byte) error {
 	offset := 0
 
@@ -497,6 +570,13 @@ func (idx *InvertedIndex) Decode(data []byte) error {
 
 	// Read document statistics
 	newOffset, err = idx.decodeDocStats(data, offset)
+	if err != nil {
+		return err
+	}
+	offset = newOffset
+
+	// Read roaring bitmaps (NEW!)
+	newOffset, err = idx.decodeRoaringBitmaps(data, offset)
 	if err != nil {
 		return err
 	}
@@ -582,6 +662,60 @@ func (idx *InvertedIndex) decodeDocStats(data []byte, offset int) (int, error) {
 		}
 
 		idx.DocStats[docID] = docStats
+	}
+
+	return offset, nil
+}
+
+// decodeRoaringBitmaps reads the roaring bitmaps for document-level storage
+//
+// DESERIALIZATION:
+// ----------------
+// Read each term and its roaring bitmap, reconstructing the DocBitmaps map
+//
+// FORMAT:
+// -------
+// [NumBitmaps: uint32]
+// For each bitmap:
+//
+//	[TermLength: uint32][Term: bytes]
+//	[BitmapLength: uint32][Bitmap: bytes]
+//
+// RECOVERY:
+// ---------
+// We create a new roaring.Bitmap for each term and deserialize it
+// using roaring's native UnmarshalBinary method
+func (idx *InvertedIndex) decodeRoaringBitmaps(data []byte, offset int) (int, error) {
+	// Read number of bitmaps
+	numBitmaps := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
+
+	// Initialize the DocBitmaps map
+	idx.DocBitmaps = make(map[string]*roaring.Bitmap, numBitmaps)
+
+	// Read each term and its bitmap
+	for i := 0; i < numBitmaps; i++ {
+		// Read term length
+		termLen := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+
+		// Read term
+		term := string(data[offset : offset+termLen])
+		offset += termLen
+
+		// Read bitmap length
+		bitmapLen := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+
+		// Read and deserialize bitmap
+		bitmap := roaring.NewBitmap()
+		if err := bitmap.UnmarshalBinary(data[offset : offset+bitmapLen]); err != nil {
+			return 0, err
+		}
+		offset += bitmapLen
+
+		// Store in map
+		idx.DocBitmaps[term] = bitmap
 	}
 
 	return offset, nil

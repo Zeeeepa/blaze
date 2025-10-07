@@ -31,6 +31,8 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+
+	"github.com/RoaringBitmap/roaring"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -103,30 +105,38 @@ type DocumentStats struct {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CORE DATA STRUCTURE: InvertedIndex
+// CORE DATA STRUCTURE: InvertedIndex with HYBRID STORAGE
 // ═══════════════════════════════════════════════════════════════════════════════
-// The InvertedIndex is the main structure that holds all searchable data.
+// The InvertedIndex uses a hybrid approach for maximum efficiency:
 //
 // Architecture:
 //
 //	InvertedIndex
-//	├── PostingsList: map[string]SkipList
-//	│   ├── "quick" → SkipList of positions
-//	│   ├── "brown" → SkipList of positions
-//	│   └── "fox"   → SkipList of positions
+//	├── DocBitmaps: map[string]*roaring.Bitmap  (DOCUMENT-LEVEL)
+//	│   ├── "quick" → Bitmap of document IDs [1, 3, 5, ...]
+//	│   ├── "brown" → Bitmap of document IDs [1, 2, 7, ...]
+//	│   └── "fox"   → Bitmap of document IDs [3, 5, ...]
+//	├── PostingsList: map[string]SkipList       (POSITION-LEVEL)
+//	│   ├── "quick" → SkipList of exact positions
+//	│   ├── "brown" → SkipList of exact positions
+//	│   └── "fox"   → SkipList of exact positions
 //	└── mu: mutex for thread safety
 //
-// Why a map of SkipLists?
-// - Map: Allows O(1) lookup of any word
-// - SkipList: Allows O(log n) operations for finding positions (more on this in skip_list.go)
+// Why Hybrid Storage?
+//   - Roaring Bitmaps: Lightning-fast for document-level operations (AND, OR, NOT)
+//     10-100x memory compression, O(1) boolean operations
+//   - Skip Lists: Essential for position-based queries (phrases, proximity)
 //
-// Thread Safety:
-// - Multiple goroutines might try to update the index simultaneously
-// - The mutex (mu) ensures only one goroutine modifies the index at a time
+// This gives us the best of both worlds!
 // ═══════════════════════════════════════════════════════════════════════════════
 type InvertedIndex struct {
-	mu           sync.Mutex          // Protects against concurrent access
-	PostingsList map[string]SkipList // Word → List of where it appears
+	mu sync.Mutex // Protects against concurrent access
+
+	// DOCUMENT-LEVEL STORAGE (for fast document lookups and boolean queries)
+	DocBitmaps map[string]*roaring.Bitmap // Term → Bitmap of document IDs
+
+	// POSITION-LEVEL STORAGE (for phrase search, proximity)
+	PostingsList map[string]SkipList // Term → Positions
 
 	// ===============================
 	// BM25 INDEXING DATA STRUCTURES
@@ -137,10 +147,11 @@ type InvertedIndex struct {
 	BM25Params BM25Parameters        // BM25 tuning parameters
 }
 
-// NewInvertedIndex creates a new empty inverted index with BM25 support
+// NewInvertedIndex creates a new empty inverted index with hybrid storage and BM25 support
 func NewInvertedIndex() *InvertedIndex {
 	return &InvertedIndex{
-		PostingsList: make(map[string]SkipList),
+		DocBitmaps:   make(map[string]*roaring.Bitmap), // Initialize document-level bitmaps
+		PostingsList: make(map[string]SkipList),        // Initialize position-level skip lists
 		DocStats:     make(map[int]DocumentStats),
 		TotalDocs:    0,
 		TotalTerms:   0,
@@ -225,24 +236,37 @@ func (idx *InvertedIndex) Index(docID int, document string) {
 	idx.TotalTerms += int64(len(tokens))
 }
 
-// indexToken adds a single token occurrence to the index
+// indexToken adds a single token occurrence to the index (HYBRID STORAGE)
 //
 // HOW IT WORKS:
 // -------------
-// 1. Check if we've seen this token before
-//   - If yes: Get its existing SkipList
-//   - If no:  Create a new SkipList for it
+// 1. Update Roaring Bitmap (document-level)
+//   - Set the bit for this document ID
+//   - Enables fast document lookups and boolean operations
+//   - Compressed storage (10-100x smaller than skip lists alone)
 //
-// 2. Insert the new position into the SkipList
-//   - Position contains both document ID and word offset
-//   - SkipList keeps positions sorted for fast searching
+// 2. Update Skip List (position-level)
+//   - Insert exact position (docID, offset)
+//   - Enables phrase search and proximity ranking
+//   - Maintains all position information
 //
-// 3. Store the updated SkipList back in the map
+// 3. Best of both worlds!
+//   - Fast document queries via bitmaps
+//   - Detailed position queries via skip lists
 //
 // DocumentID and Offset are stored as ints
 // - The SkipList uses sentinel values (BOF=MinInt, EOF=MaxInt) to mark boundaries
 // - All position values are integers (no casting needed)
 func (idx *InvertedIndex) indexToken(token string, docID, position int) {
+	// STEP 1: Update roaring bitmap (document-level)
+	// Create bitmap if this is the first time seeing this token
+	if idx.DocBitmaps[token] == nil {
+		idx.DocBitmaps[token] = roaring.NewBitmap()
+	}
+	// Set the bit for this document ID
+	idx.DocBitmaps[token].Add(uint32(docID))
+
+	// STEP 2: Update skip list (position-level)
 	// Check if this token already has a posting list
 	skipList, exists := idx.getPostingList(token)
 	if !exists {
