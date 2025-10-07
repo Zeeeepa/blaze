@@ -1,6 +1,6 @@
 # Blaze
 
-A high-performance, full-text search library in Go featuring an inverted index with skip lists, phrase search, proximity ranking, and advanced text analysis.
+A high-performance, full-text search engine in Go featuring an inverted index with skip lists, phrase search, proximity ranking, and advanced text analysis.
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ A high-performance, full-text search library in Go featuring an inverted index w
 
 ## Overview
 
-Blaze is a Go library that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
+Blaze is a Go engine that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
 
 **Key Highlights:**
 
