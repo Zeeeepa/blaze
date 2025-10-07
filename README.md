@@ -1,6 +1,6 @@
 # Blaze
 
-A high-performance, full-text search engine in Go featuring an inverted index with skip lists, phrase search, BM25 and proximity ranking.
+A high-performance, full-text search library in Go featuring an inverted index with skip lists, phrase search, proximity ranking, and advanced text analysis.
 
 ## Table of Contents
 
@@ -26,14 +26,13 @@ A high-performance, full-text search engine in Go featuring an inverted index wi
 
 ## Overview
 
-Blaze is a Go engine that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
+Blaze is a Go library that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
 
 **Key Highlights:**
 
 - **Inverted Index**: Maps terms to document positions for instant lookups
 - **Skip Lists**: Probabilistic data structure providing O(log n) operations
-- **Advanced Search**: Phrase search, BM25 ranking, proximity ranking, and boolean queries
-- **BM25 Algorithm**: Industry-standard relevance scoring with IDF and length normalization
+- **Advanced Search**: Phrase search, proximity ranking, and boolean queries
 - **Text Analysis**: Tokenization, stemming, stopword filtering, and case normalization
 - **Thread-Safe**: Concurrent indexing with mutex protection
 - **Serialization**: Efficient binary format for persistence
@@ -44,7 +43,6 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 
 - **Term Search**: Find documents containing specific terms
 - **Phrase Search**: Exact multi-word matching ("quick brown fox")
-- **BM25 Ranking**: Industry-standard relevance scoring (used by Elasticsearch, Solr)
 - **Proximity Ranking**: Score results by term proximity
 - **Position Tracking**: Track exact word positions within documents
 
@@ -406,7 +404,7 @@ Phase 3: Validate
 ┌─────────────────────────────────────────────────────────┐
 │ Start: Pos7, End: Pos8                                  │
 │ Distance: 8 - 7 = 1                                     │
-│ Expected: 2 words - 1 = 1  MATCH!                      │
+│ Expected: 2 words - 1 = 1  ✓ MATCH!                    │
 │                                                          │
 │      "brown"  "fox"                                     │
 │        ▲       ▲                                        │
@@ -456,8 +454,8 @@ Phase 2: Find COVER START (earliest term before end)
 Phase 3: Validate & Return
 ┌──────────────────────────────────────────────────────────────┐
 │ Cover: [Pos1, Pos8]                                          │
-│ Same document? Yes                                           │
-│ All terms present? Yes                                       │
+│ Same document? ✓                                             │
+│ All terms present? ✓                                         │
 │                                                               │
 │ "quick" ... ... ... ... ... ... ... "fox"                    │
 │    ▲                                   ▲                     │
@@ -473,311 +471,7 @@ Phase 3: Validate & Return
 3. Validate all terms are in the same document
 4. Return [start, end] positions
 
-#### 4. BM25 Ranking
-
-**BM25 (Best Matching 25)** is a probabilistic ranking function used by search engines to estimate the relevance of documents to a given search query. It's the industry standard used by Elasticsearch, Solr, and Lucene.
-
-```go
-// Search and rank using BM25
-results := idx.RankBM25("machine learning", 10)
-
-for _, match := range results {
-    fmt.Printf("Doc %d: Score %.2f\n",
-        match.DocID,
-        match.Score)
-}
-```
-
-**What BM25 Considers:**
-
-```
-+------------------+-------------------------------------------------------+
-| Factor           | Description                                           |
-+------------------+-------------------------------------------------------+
-| Term Frequency   | How often does the term appear?                       |
-|                  | More occurrences = higher relevance                   |
-+------------------+-------------------------------------------------------+
-| TF Saturation    | Diminishing returns                                   |
-|                  | 3->10 occurrences matters less than 0->3             |
-+------------------+-------------------------------------------------------+
-| Document Length  | Normalize by document size                            |
-|                  | Prevents long docs from dominating results            |
-+------------------+-------------------------------------------------------+
-| Term Rarity      | Rare terms are more important than common ones        |
-|                  | "quantum" > "the" in importance                       |
-+------------------+-------------------------------------------------------+
-```
-
-**Complete BM25 Formula:**
-
-```
-                    IDF(q_i) × TF(q_i, D) × (k1 + 1)
-BM25(D, Q) = SUM  ─────────────────────────────────────────
-             q_i  TF(q_i, D) + k1 × (1 - b + b × |D|/avgdl)
-            in Q
-
-Where:
-    D       = Document being scored
-    Q       = Query (set of terms q_1, q_2, ..., q_n)
-    q_i     = Individual query term
-```
-
-**Component Breakdown:**
-
-```
-+-------------------+-----------------------------------------------------+
-|    Component      |                   Definition                        |
-+-------------------+-----------------------------------------------------+
-| IDF(q_i)          | Inverse Document Frequency                          |
-|                   |                                                     |
-|                   |          N - df(q_i) + 0.5                          |
-|                   | log( ─────────────────────── + 1 )                  |
-|                   |            df(q_i) + 0.5                            |
-|                   |                                                     |
-|                   | N  = Total documents in corpus                      |
-|                   | df = Documents containing term q_i                  |
-|                   |                                                     |
-|                   | Effect: Rare terms get higher weights              |
-+-------------------+-----------------------------------------------------+
-| TF(q_i, D)        | Term Frequency                                      |
-|                   | = Number of times q_i appears in document D         |
-|                   |                                                     |
-|                   | Effect: More occurrences = higher relevance         |
-+-------------------+-----------------------------------------------------+
-| k1                | Term Frequency Saturation Parameter                 |
-|                   | = 1.5 (default)                                     |
-|                   | Range: [1.2, 2.0]                                   |
-|                   |                                                     |
-|                   | Effect: Controls diminishing returns                |
-|                   |         Higher k1 = less saturation                 |
-+-------------------+-----------------------------------------------------+
-| b                 | Length Normalization Parameter                      |
-|                   | = 0.75 (default)                                    |
-|                   | Range: [0, 1]                                       |
-|                   |                                                     |
-|                   | Effect: Controls length penalty                     |
-|                   |         b=1  = full normalization                   |
-|                   |         b=0  = no normalization                     |
-+-------------------+-----------------------------------------------------+
-| |D|               | Document Length                                     |
-|                   | = Number of terms in document D                     |
-+-------------------+-----------------------------------------------------+
-| avgdl             | Average Document Length                             |
-|                   | = Total terms / Total documents                     |
-+-------------------+-----------------------------------------------------+
-```
-
-**Visual Example - Term Frequency Saturation:**
-
-```
-Score Contribution (with k1=1.5, b=0.75)
-    ^
-    |                            /---------------  (saturation)
-    |                          /
- 3  |                       /
-    |                     /
- 2  |                  /
-    |               /
- 1  |            /
-    |         /
- 0  |______/
-    +---+---+---+---+---+---+---+---+---+---+---> Term Frequency
-    0   1   2   3   4   5   6   7   8   9   10
-
-Key Insight: Going from 0->3 occurrences adds more to the score
-             than going from 7->10 occurrences (diminishing returns)
-```
-
-**Visual Example - Document Length Normalization:**
-
-```
-Scenario: Same term frequency, different document lengths
-
-Document A: 100 words, "learning" appears 3 times
-Document B: 1000 words, "learning" appears 3 times
-
-Raw TF:  Both have TF = 3
-Density: Doc A = 3/100  = 3.0%    <- Higher density
-         Doc B = 3/1000 = 0.3%    <- Lower density
-
-BM25 adjusts: Doc A gets HIGHER score (term is more prominent)
-              Doc B gets LOWER score (term is less prominent)
-
-Length Penalty Formula:
-
-    Penalty = k1 × (1 - b + b × docLen/avgDocLen)
-
-    If docLen > avgDocLen: Penalty increases (score decreases)
-    If docLen < avgDocLen: Penalty decreases (score increases)
-```
-
-**Step-by-Step Scoring Example:**
-
-```
-SETUP:
-------
-Query:  "machine learning"
-Corpus: 1000 documents, average length 150 words
-Target: Document 1 (200 words)
-        - "machine" appears 3 times (df=100 docs have "machine")
-        - "learning" appears 2 times (df=50 docs have "learning")
-
-Parameters: k1=1.5, b=0.75
-
-
-STEP 1: Calculate IDF for each term
-----------------------------------------
-
-IDF(machine):
-    N = 1000, df = 100
-
-    IDF = log((1000 - 100 + 0.5) / (100 + 0.5) + 1)
-        = log(900.5 / 100.5 + 1)
-        = log(8.96 + 1)
-        = log(9.96)
-        ≈ 2.30
-
-IDF(learning):
-    N = 1000, df = 50
-
-    IDF = log((1000 - 50 + 0.5) / (50 + 0.5) + 1)
-        = log(950.5 / 50.5 + 1)
-        = log(18.82 + 1)
-        = log(19.82)
-        ≈ 2.99
-
-    Note: "learning" is rarer (df=50) than "machine" (df=100)
-          so it gets a higher IDF weight
-
-
-STEP 2: Calculate normalized TF for "machine"
-----------------------------------------------
-
-TF = 3 (appears 3 times)
-docLen = 200
-avgdl = 150
-
-Numerator   = TF × (k1 + 1)
-            = 3 × (1.5 + 1)
-            = 3 × 2.5
-            = 7.5
-
-Denominator = TF + k1 × (1 - b + b × (docLen / avgdl))
-            = 3 + 1.5 × (1 - 0.75 + 0.75 × (200/150))
-            = 3 + 1.5 × (0.25 + 0.75 × 1.333)
-            = 3 + 1.5 × (0.25 + 1.0)
-            = 3 + 1.5 × 1.25
-            = 3 + 1.875
-            = 4.875
-
-Normalized TF = 7.5 / 4.875 ≈ 1.54
-
-Contribution = IDF × Normalized TF
-             = 2.30 × 1.54
-             ≈ 3.54
-
-
-STEP 3: Calculate normalized TF for "learning"
------------------------------------------------
-
-TF = 2 (appears 2 times)
-docLen = 200
-avgdl = 150
-
-Numerator   = 2 × 2.5 = 5.0
-
-Denominator = 2 + 1.5 × (1 - 0.75 + 0.75 × (200/150))
-            = 2 + 1.875
-            = 3.875
-
-Normalized TF = 5.0 / 3.875 ≈ 1.29
-
-Contribution = IDF × Normalized TF
-             = 2.99 × 1.29
-             ≈ 3.86
-
-
-STEP 4: Calculate final BM25 score
------------------------------------
-
-BM25(Document 1, "machine learning") = 3.54 + 3.86 = 7.40
-
-                    +----------+----------+
-                    | Term     | Score    |
-                    +----------+----------+
-                    | machine  | 3.54     |
-                    | learning | 3.86     |
-                    +----------+----------+
-                    | TOTAL    | 7.40     |
-                    +----------+----------+
-```
-
-**Why BM25 Works:**
-
-```
-+------------------------+------------------------------------------------+
-| Advantage              | Explanation                                    |
-+------------------------+------------------------------------------------+
-| Industry Standard      | Used by Elasticsearch, Solr, Lucene           |
-|                        | Battle-tested in production systems            |
-+------------------------+------------------------------------------------+
-| Probabilistic          | Based on probability ranking principle         |
-|                        | Solid theoretical foundation                   |
-+------------------------+------------------------------------------------+
-| Term Rarity (IDF)      | Rare terms contribute more to score            |
-|                        | "quantum" > "the" in importance                |
-+------------------------+------------------------------------------------+
-| Saturation             | Diminishing returns for repeated terms         |
-|                        | 0->3 occurrences: HIGH impact                  |
-|                        | 7->10 occurrences: LOW impact                  |
-+------------------------+------------------------------------------------+
-| Length Normalization   | Prevents long documents from dominating        |
-|                        | Adjusts for document size bias                 |
-+------------------------+------------------------------------------------+
-| Tunable                | Adjust k1 and b for domain-specific needs     |
-|                        | Customize behavior without changing algorithm  |
-+------------------------+------------------------------------------------+
-```
-
-**Comparison with Simple TF-IDF:**
-
-```
-Simple TF-IDF:
-    Score = TF × IDF
-    Problem: Linear relationship with TF
-             10 occurrences = 10x score of 1 occurrence
-
-    TF-IDF Score
-        ^
-        |                                        /
-     10 |                                      /
-        |                                    /
-      5 |                                  /
-        |                                /
-      0 |______________________________/
-        +---+---+---+---+---+---+---+---+---> Term Frequency
-        0   2   4   6   8   10  12  14  16
-
-BM25:
-    Score = IDF × (TF × (k1 + 1)) / (TF + k1 × length_norm)
-    Benefit: Sublinear relationship with TF
-             Saturation prevents spam
-
-    BM25 Score
-        ^
-        |                    /----------------  (plateau)
-      4 |                  /
-        |                /
-      2 |             /
-        |          /
-      0 |________/
-        +---+---+---+---+---+---+---+---+---> Term Frequency
-        0   2   4   6   8   10  12  14  16
-
-    Key: BM25 saturates, preventing keyword stuffing exploits
-```
-
-#### 5. Proximity Ranking
+#### 4. Proximity Ranking
 
 Score and rank documents by term proximity:
 
@@ -1031,52 +725,13 @@ fmt.Printf("Cover: Doc %d, Pos %d-%d\n",
     int(cover[1].Offset))
 ```
 
-#### RankBM25
-
-```go
-func (idx *InvertedIndex) RankBM25(query string, maxResults int) []Match
-```
-
-Performs BM25 ranking of search results. This is the recommended search function for most use cases.
-
-**Parameters:**
-
-- `query`: Search query (e.g., "machine learning")
-- `maxResults`: Maximum number of results to return
-
-**Returns:**
-
-- `[]Match`: Sorted array of matches with BM25 scores
-
-**Example:**
-
-```go
-results := idx.RankBM25("machine learning", 10)
-for i, match := range results {
-    fmt.Printf("%d. Doc %d (score: %.2f)\n",
-        i+1,
-        match.DocID,
-        match.Score)
-}
-```
-
-**Match Structure:**
-
-```go
-type Match struct {
-    DocID   int        // Document identifier
-    Offsets []Position // Where terms appear in the document
-    Score   float64    // BM25 relevance score
-}
-```
-
 #### RankProximity
 
 ```go
 func (idx *InvertedIndex) RankProximity(query string, maxResults int) []Match
 ```
 
-Performs proximity-based ranking of search results. Alternative to BM25, ranks by term proximity.
+Performs proximity-based ranking of search results. This is the main search function.
 
 **Parameters:**
 
@@ -1085,7 +740,7 @@ Performs proximity-based ranking of search results. Alternative to BM25, ranks b
 
 **Returns:**
 
-- `[]Match`: Sorted array of matches with proximity scores
+- `[]Match`: Sorted array of matches with scores
 
 **Example:**
 
@@ -1098,17 +753,6 @@ for i, match := range results {
         match.Score)
 }
 ```
-
-**BM25 vs Proximity Ranking:**
-
-| Feature                  | BM25                      | Proximity                    |
-| ------------------------ | ------------------------- | ---------------------------- |
-| **Term Rarity**          | Yes (IDF)                 | No (all terms equal)         |
-| **Length Normalization** | Yes (built-in)            | No                           |
-| **Term Frequency**       | Yes (with saturation)     | No                           |
-| **Term Distance**        | No                        | Yes (main factor)            |
-| **Use Case**             | General search            | Finding close co-occurrences |
-| **Industry Standard**    | Yes (Elasticsearch, Solr) | No (custom algorithm)        |
 
 #### Encode
 
@@ -1263,7 +907,7 @@ Finds the smallest position greater than the given position.
 
 ## Examples
 
-### Example 1: Basic Document Search with BM25
+### Example 1: Basic Document Search
 
 ```go
 package main
@@ -1282,12 +926,13 @@ func main() {
     idx.Index(2, "Python is a high-level programming language")
     idx.Index(3, "Go is fast and efficient for system programming")
 
-    // Search for "programming language" using BM25
-    results := idx.RankBM25("programming language", 10)
+    // Search for "programming language"
+    results := idx.RankProximity("programming language", 10)
 
     fmt.Println("Search results for 'programming language':")
     for i, match := range results {
-        fmt.Printf("%d. Document %d (score: %.3f)\n", i+1, match.DocID, match.Score)
+        docID := int(match.Offsets[0].DocumentID)
+        fmt.Printf("%d. Document %d (score: %.3f)\n", i+1, docID, match.Score)
     }
 }
 ```
@@ -1296,12 +941,10 @@ func main() {
 
 ```
 Search results for 'programming language':
-1. Document 1 (score: 4.521)
-2. Document 2 (score: 4.521)
-3. Document 3 (score: 2.156)
+1. Document 1 (score: 1.000)
+2. Document 2 (score: 1.000)
+3. Document 3 (score: 0.500)
 ```
-
-**Note**: BM25 scores are absolute values (not normalized to 0-1), reflecting relevance based on term frequency, document length, and term rarity.
 
 ### Example 2: Phrase Search
 
@@ -1468,64 +1111,7 @@ Default tokens: [run dog run fast]
 Custom tokens: [running dogs running fast]
 ```
 
-### Example 6: Comparing BM25 and Proximity Ranking
-
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/wizenheimer/blaze"
-)
-
-func main() {
-    idx := blaze.NewInvertedIndex()
-
-    // Index documents
-    idx.Index(1, "machine learning algorithms")
-    idx.Index(2, "machine learning machine learning")  // High term frequency
-    idx.Index(3, "machine and algorithms and learning") // Terms far apart
-
-    query := "machine learning"
-
-    // BM25 Ranking
-    fmt.Println("BM25 Rankings:")
-    bm25Results := idx.RankBM25(query, 10)
-    for i, match := range bm25Results {
-        fmt.Printf("%d. Doc %d (score: %.3f)\n", i+1, match.DocID, match.Score)
-    }
-
-    // Proximity Ranking
-    fmt.Println("\nProximity Rankings:")
-    proxResults := idx.RankProximity(query, 10)
-    for i, match := range proxResults {
-        docID := int(match.Offsets[0].DocumentID)
-        fmt.Printf("%d. Doc %d (score: %.3f)\n", i+1, docID, match.Score)
-    }
-}
-```
-
-**Output:**
-
-```
-BM25 Rankings:
-1. Doc 2 (score: 5.234)  ← High term frequency
-2. Doc 1 (score: 3.156)
-3. Doc 3 (score: 2.891)
-
-Proximity Rankings:
-1. Doc 1 (score: 1.000)  ← Terms adjacent
-2. Doc 2 (score: 1.000)
-3. Doc 3 (score: 0.200)  ← Terms far apart
-```
-
-**Key Differences:**
-
-- **BM25** favors Doc 2 (repeated terms = high relevance)
-- **Proximity** favors Doc 1 and Doc 2 equally (both have adjacent terms)
-- Doc 3 ranks low in both (terms spread out)
-
-### Example 7: Building a Simple Search Engine
+### Example 6: Building a Simple Search Engine
 
 ```go
 package main
@@ -1573,8 +1159,8 @@ func main() {
             continue
         }
 
-        // Perform search using BM25
-        results := idx.RankBM25(query, 5)
+        // Perform search
+        results := idx.RankProximity(query, 5)
 
         if len(results) == 0 {
             fmt.Println("No results found")
@@ -1584,8 +1170,11 @@ func main() {
         // Display results
         fmt.Printf("\nFound %d result(s):\n", len(results))
         for i, match := range results {
-            fmt.Printf("\n%d. Document %d (Score: %.3f)\n", i+1, match.DocID, match.Score)
-            fmt.Printf("   %s\n", docs[match.DocID])
+            docID := int(match.Offsets[0].DocumentID)
+            score := match.Score
+
+            fmt.Printf("\n%d. Document %d (Score: %.3f)\n", i+1, docID, score)
+            fmt.Printf("   %s\n", docs[docID])
         }
     }
 }
@@ -1600,7 +1189,6 @@ func main() {
 | Index (per document) | O(n × log m) | O(n × m)   | n = tokens, m = total positions |
 | Term lookup          | O(log m)     | O(m)       | m = positions for term          |
 | Phrase search        | O(k × log m) | O(k × m)   | k = phrase length               |
-| BM25 ranking         | O(t × d)     | O(t × d)   | t = query terms, d = candidates |
 | Proximity ranking    | O(t × m)     | O(t × m)   | t = query terms                 |
 | Skip list insert     | O(log n)     | O(n)       | n = elements in list            |
 | Skip list search     | O(log n)     | O(n)       | Probabilistically rare          |
@@ -1622,10 +1210,7 @@ Performance on Apple M2 (8 cores), Go 1.24:
 BenchmarkIndex-8                     50000    35421 ns/op    18234 B/op    245 allocs/op
 BenchmarkTermSearch-8              300000     4123 ns/op      128 B/op      3 allocs/op
 BenchmarkPhraseSearch-8            100000    12456 ns/op      512 B/op     12 allocs/op
-BenchmarkRankBM25-8                  60000    24567 ns/op     1856 B/op     38 allocs/op
 BenchmarkProximityRanking-8         50000    28934 ns/op     2048 B/op     45 allocs/op
-BenchmarkCalculateIDF-8           5000000      234 ns/op       16 B/op      1 allocs/op
-BenchmarkCalculateBM25Score-8     2000000      567 ns/op       64 B/op      2 allocs/op
 BenchmarkSkipListInsert-8         3000000      413 ns/op      255 B/op      6 allocs/op
 BenchmarkSkipListSearch-8         5000000      203 ns/op       23 B/op      1 allocs/op
 BenchmarkAnalyze-8                1000000     1234 ns/op      512 B/op      8 allocs/op
@@ -1651,77 +1236,6 @@ BenchmarkDecode-8                   15000   123456 ns/op    49152 B/op    189 al
 - Serialization reduces storage by ~40% compared to in-memory size
 
 ## Configuration
-
-### BM25 Parameters
-
-Customize BM25 ranking behavior:
-
-```go
-type BM25Parameters struct {
-    K1 float64 // Term frequency saturation (default: 1.5)
-    B  float64 // Length normalization (default: 0.75)
-}
-```
-
-**Tuning BM25:**
-
-```go
-idx := blaze.NewInvertedIndex()
-
-// Adjust BM25 parameters before indexing
-idx.BM25Params.K1 = 2.0  // Higher = less saturation (more weight to TF)
-idx.BM25Params.B = 0.5   // Lower = less length penalty
-
-// Now index and search
-idx.Index(1, "document content")
-results := idx.RankBM25("query", 10)
-```
-
-**Parameter Effects:**
-
-| Parameter | Range     | Effect                  | When to Adjust                                       |
-| --------- | --------- | ----------------------- | ---------------------------------------------------- |
-| **K1**    | 1.2 - 2.0 | Controls TF saturation  | Higher for domains where term frequency matters more |
-| **B**     | 0 - 1     | Controls length penalty | Lower for domains with naturally longer docs         |
-
-**Examples:**
-
-```go
-// Academic papers (long documents, repeated terms important)
-idx.BM25Params.K1 = 2.0
-idx.BM25Params.B = 0.5
-
-// Short messages (length less important)
-idx.BM25Params.K1 = 1.2
-idx.BM25Params.B = 0.3
-
-// Default (works well for most cases)
-idx.BM25Params.K1 = 1.5
-idx.BM25Params.B = 0.75
-```
-
-**BM25 Statistics:**
-
-During indexing, Blaze automatically tracks:
-
-```go
-type DocumentStats struct {
-    DocID     int            // Document identifier
-    Length    int            // Number of terms
-    TermFreqs map[string]int // Term frequencies
-}
-
-// Corpus-level statistics
-idx.TotalDocs  // Total documents indexed
-idx.TotalTerms // Total terms across all documents
-idx.DocStats   // Per-document statistics
-```
-
-These statistics are:
-
-- Automatically computed during indexing
-- Serialized with the index
-- Used for BM25 score calculation
 
 ### Analyzer Configuration
 
@@ -1819,19 +1333,6 @@ func IndexDocuments(docs []Document) *blaze.InvertedIndex {
 }
 
 func SearchDocuments(idx *blaze.InvertedIndex, query string) []int {
-    // Use BM25 for general relevance ranking (recommended)
-    matches := idx.RankBM25(query, 20)
-
-    docIDs := make([]int, len(matches))
-    for i, match := range matches {
-        docIDs[i] = match.DocID
-    }
-
-    return docIDs
-}
-
-// Alternative: Use proximity ranking to find documents with close term matches
-func SearchDocumentsByProximity(idx *blaze.InvertedIndex, query string) []int {
     matches := idx.RankProximity(query, 20)
 
     docIDs := make([]int, len(matches))
@@ -1868,12 +1369,8 @@ func IndexLogs(logFile string) (*blaze.InvertedIndex, error) {
     return idx, scanner.Err()
 }
 
-// Find all ERROR log lines using BM25 (considers frequency and rarity)
-errorLogs := idx.RankBM25("ERROR", 100)
-
-// Alternative: Use proximity for finding error patterns
-// e.g., "connection timeout" appearing close together
-patternMatches := idx.RankProximity("connection timeout", 50)
+// Find all ERROR log lines
+matches := idx.RankProximity("ERROR", 100)
 ```
 
 ### 3. Code Search
@@ -1917,13 +1414,6 @@ func IndexCodebase(rootDir string) (*blaze.InvertedIndex, error) {
 
     return idx, err
 }
-
-// BM25: Find files with frequent mentions of a function/variable
-bm25Results := idx.RankBM25("http.Handler", 20)
-
-// Proximity: Find exact API patterns (e.g., function calls with parameters)
-// Better for finding "http.HandleFunc" as a specific pattern
-proximityResults := idx.RankProximity("http HandleFunc", 20)
 ```
 
 ### 4. E-commerce Product Search
@@ -1956,12 +1446,8 @@ func IndexProducts(products []Product) *blaze.InvertedIndex {
     return idx
 }
 
-// BM25: Best for general product search (considers all factors)
-results := idx.RankBM25("wireless headphones", 10)
-
-// Proximity: Good for finding exact product name matches
-// (e.g., "Sony WH-1000XM4" as an exact phrase proximity)
-exactMatches := idx.RankProximity("wireless headphones", 10)
+// Search for "wireless headphones"
+results := idx.RankProximity("wireless headphones", 10)
 ```
 
 ### 5. Email Search
@@ -1991,12 +1477,8 @@ func IndexEmails(emails []Email) *blaze.InvertedIndex {
     return idx
 }
 
-// BM25: Find emails where terms appear frequently (general search)
-matches := idx.RankBM25("project deadline", 50)
-
-// Proximity: Find emails where "project" and "deadline" appear close together
-// (more precise, better for finding specific mentions)
-closeMatches := idx.RankProximity("project deadline", 50)
+// Find emails about "project deadline"
+matches := idx.RankProximity("project deadline", 50)
 ```
 
 ## Testing
@@ -2034,8 +1516,7 @@ Coverage report: coverage.html
 - Inverted Index: 100%
 - Skip Lists: 100%
 - Text Analysis: 100%
-- Search Operations: 100%
-- BM25 Ranking: 100%
+- Search Operations: 98%
 - Serialization: 100%
 
 ### Writing Tests
@@ -2182,15 +1663,15 @@ Instead of just tracking document IDs, Blaze tracks exact word positions:
 ```
 Traditional Index (Document IDs only):
 ┌─────────┬──────────────────┐
-│ "quick" │ [Doc1, Doc3]     │  Cannot do phrase search
-└─────────┴──────────────────┘  Cannot rank by proximity
+│ "quick" │ [Doc1, Doc3]     │  ✗ Can't do phrase search
+└─────────┴──────────────────┘  ✗ Can't rank by proximity
 
 Position-Based Index (Document + Offset):
 ┌─────────┬────────────────────────────────────┐
-│ "quick" │ [Doc1:Pos1, Doc3:Pos0]             │  Enables phrase search
-│ "brown" │ [Doc1:Pos2, Doc3:Pos1]             │  Enables proximity ranking
-│ "fox"   │ [Doc1:Pos3]                        │  Enables snippet generation
-└─────────┴────────────────────────────────────┘  Enables precise results
+│ "quick" │ [Doc1:Pos1, Doc3:Pos0]             │  ✓ Phrase search
+│ "brown" │ [Doc1:Pos2, Doc3:Pos1]             │  ✓ Proximity ranking
+│ "fox"   │ [Doc1:Pos3]                        │  ✓ Snippet generation
+└─────────┴────────────────────────────────────┘  ✓ Precise results
 
 Can verify: "quick brown" is a phrase in Doc1 (Pos1→Pos2)
             but NOT in Doc3 (Pos0 and Pos1 are not "quick brown")
@@ -2381,62 +1862,19 @@ func (idx *InvertedIndex) Stats() map[string]interface{} {
 }
 ```
 
-### 7. Choose the Right Ranking Algorithm
-
-**Use BM25 when:**
-
-- You need industry-standard relevance ranking
-- Term frequency matters (documents with more occurrences rank higher)
-- You want automatic length normalization
-- Rare terms should be weighted more heavily
-- **Recommended for most use cases**
-
-**Use Proximity when:**
-
-- You want to find terms close together
-- Term distance is more important than frequency
-- You're searching for specific co-occurrences
-- You need snippet generation (using position data)
-
-**Practical Examples:**
-
-```go
-// E-commerce: General product search
-// BM25 considers term frequency and rarity
-bm25Results := idx.RankBM25("wireless bluetooth headphones", 20)
-// Returns products with any/all terms, ranked by relevance
-
-// E-commerce: Exact product name
-// Proximity finds terms appearing together
-proxResults := idx.RankProximity("Sony WH-1000XM4", 20)
-// Returns products where terms appear close together
-
-// Document search: Research papers
-// BM25 for broad topic search
-papers := idx.RankBM25("neural networks deep learning", 50)
-
-// Document search: Finding specific phrase mentions
-// Proximity for finding "neural networks" as a concept
-mentions := idx.RankProximity("neural networks", 50)
-
-// Best practice: Use both for different purposes!
-generalResults := idx.RankBM25(query, 100)    // Cast wide net
-preciseResults := idx.RankProximity(query, 20) // Refine results
-```
-
-### 8. Limit Result Set Size
+### 7. Limit Result Set Size
 
 Always specify a reasonable max results:
 
 ```go
 // Good: Limit results
-results := idx.RankBM25("search query", 100)
+results := idx.RankProximity("search query", 100)
 
 // Bad: Could return millions of results
-results := idx.RankBM25("search query", math.MaxInt32)
+results := idx.RankProximity("search query", math.MaxInt32)
 ```
 
-### 9. Pre-process Queries
+### 8. Pre-process Queries
 
 Normalize queries before searching:
 
@@ -2457,31 +1895,7 @@ func NormalizeQuery(query string) string {
 
 // Use normalized query
 normalizedQuery := NormalizeQuery(userInput)
-results := idx.RankBM25(normalizedQuery, 20)
-```
-
-### 10. Monitor BM25 Statistics
-
-Track corpus statistics for insights:
-
-```go
-// After indexing
-fmt.Printf("Total documents: %d\n", idx.TotalDocs)
-fmt.Printf("Total terms: %d\n", idx.TotalTerms)
-fmt.Printf("Average doc length: %.2f\n",
-    float64(idx.TotalTerms) / float64(idx.TotalDocs))
-
-// Per-document analysis
-for docID, stats := range idx.DocStats {
-    fmt.Printf("Doc %d: %d terms\n", docID, stats.Length)
-
-    // Find most frequent terms
-    for term, freq := range stats.TermFreqs {
-        if freq > 5 {
-            fmt.Printf("  %s: %d occurrences\n", term, freq)
-        }
-    }
-}
+results := idx.RankProximity(normalizedQuery, 20)
 ```
 
 ## Contributing
