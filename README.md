@@ -1,5 +1,12 @@
 # Blaze
 
+<div align="center">
+  <img alt="image" src="./media/image.png" />
+  <p>
+    <a href="wizenheimer.github.io/blaze"><strong>Docs </strong> </a>
+  </p>
+</div>
+
 A high-performance, full-text search engine in Go featuring an inverted index with skip lists, phrase search, BM25 and proximity ranking.
 
 ## Table of Contents
