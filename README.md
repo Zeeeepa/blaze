@@ -7,12 +7,14 @@
   </p>
 </div>
 
-A high-performance full-text search engine in Go with inverted indexing, boolean queries, phrase search, proximity queries, and BM25 ranking—powered by a flexible query engine, roaring bitmaps, and skip lists.
+**Built for hackers, not hyperscalers.**  
+A tiny, hackable full-text search engine you can actually fit in your head. Features inverted indexing, boolean queries, phrase search, proximity queries, and BM25 ranking—powered by a flexible query engine, roaring bitmaps, and skip lists.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
+- [Not for Everyone](#not-for-everyone)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
@@ -79,6 +81,12 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 - **Skip Lists**: O(log n) search, insert, and delete operations
 - **Inverted Index**: Efficient term-to-position mapping
 - **Binary Serialization**: Compact storage format
+
+## Not for Everyone
+
+We'd admit, Blaze isn't for everyone. If you're looking for a production-ready, battle-tested full text search engine, check out [Bleve](https://github.com/blevesearch/bleve) - a modern, feature-rich indexing library in Go.
+
+Blaze is purpose-built to be hackable. It is tiny enough to fit in your brain and decent enough to blow it. If you've ever wondered how inverted indexes are structured, how BM25 scoring works, or how boolean queries get executed, Blaze gives you a readable, hackable implementation you can learn from and experiment with.
 
 ## Installation
 
