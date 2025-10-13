@@ -39,11 +39,16 @@ A tiny, hackable full-text search engine you can actually fit in your head. Feat
 - [Architecture](#architecture)
 - [Best Practices](#best-practices)
 - [Contributing](#contributing)
+- [Related Projects](#related-projects)
 - [License](#license)
 
 ## Overview
 
 Blaze is a Go engine that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
+
+> **Looking for hybrid search indexes?** Check out [Comet](https://github.com/wizenheimer/comet) - a companion project for hybrid vector search that brings together BM25, Flat, HNSW, IVF, PQ and IVFPQ indexes. It pairs hybrid retrieval with reciprocal rank fusion, autocut, pre-filtering, semantic search, full-text search, and multi-KNN searches, and multi-query operations — all in pure Go.
+>
+> Understand search internals from the inside out. Built for hackers, not hyperscalers.
 
 **Key Highlights:**
 
@@ -84,7 +89,17 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 
 ## Not for Everyone
 
-We'd admit, Blaze isn't for everyone. If you're looking for a production-ready, battle-tested full text search engine, check out [Bleve](https://github.com/blevesearch/bleve) - a modern, feature-rich indexing library in Go.
+We'd admit, Blaze isn't for everyone. If you're looking for a production-ready, battle-tested full-text search engine, check out [Bleve](https://github.com/blevesearch/bleve) - a modern, feature-rich indexing library in Go.
+
+If you need **vector search** or **hybrid search** capabilities, check out [Comet](https://github.com/wizenheimer/comet) - **built for hackers, not hyperscalers**. It's a high-performance hybrid vector index written in Go that brings together multiple indexing strategies and search modalities. Comet supports:
+
+- **Multiple Index Types**: Flat (exact), HNSW (graph), IVF (clustering), PQ (quantization), and IVFPQ (hybrid)
+- **Full-Text Search**: BM25 ranking with tokenization and normalization
+- **Metadata Filtering**: Fast filtering using Roaring Bitmaps and Bit-Sliced Indexes
+- **Hybrid Retrieval**: Reciprocal Rank Fusion, semantic search, multi-KNN, and multi-query operations
+- **Advanced Features**: Quantization, reranking, autocut, pre-filtering, soft deletes, and index rebuilds
+
+**Comet — a vector database for people who read source.** If you've ever wondered how vector indexes work, how HNSW graphs are built, or how hybrid search combines semantic and keyword search, layers in pre-filtering, handles rank aggregation, rank fusion etc, Comet gives you a readable, hackable implementation to play with.
 
 Blaze is purpose-built to be hackable. It is tiny enough to fit in your brain and decent enough to blow it. If you've ever wondered how inverted indexes are structured, how BM25 scoring works, or how boolean queries get executed, Blaze gives you a readable, hackable implementation you can learn from and experiment with.
 
@@ -2368,6 +2383,11 @@ This geometric distribution ensures O(log n) average performance.
 
 ## Use Cases
 
+> **Choosing Between Blaze and [Comet](https://github.com/wizenheimer/comet):**  
+> Use **Blaze** for keyword-based full-text search (BM25, phrases, boolean queries).  
+> Use **Comet** for semantic search with embeddings (vector similarity, hybrid retrieval, HNSW).  
+> **A hackable playground to understand vector search.**
+
 ### 1. Document Search Systems
 
 Build a search engine for documents:
@@ -3479,6 +3499,32 @@ Bad:
 6. Commit your changes
 7. Push to your fork
 8. Open a Pull Request
+
+## Related Projects
+
+### [Comet](https://github.com/wizenheimer/comet) - Hybrid Vector Search
+
+**The hacker's vector DB - A vector database you can actually fit in your head.**
+
+A high-performance hybrid vector search index in Go. Comet complements Blaze by adding vector search capabilities:
+
+- **Vector Indexes**: Flat, HNSW (graph-based), IVF (clustering), PQ (quantization), IVFPQ (hybrid)
+- **Hybrid Search**: Combines vector similarity, BM25 text search, and metadata filtering
+- **Fusion Strategies**: Reciprocal Rank Fusion, autocut, threshold-based results, multi-KNN
+- **Metadata Filtering**: Roaring Bitmaps and Bit-Sliced Indexes for fast pre-filtering
+- **Advanced Features**: Quantization, reranking, soft deletes, index rebuilds, multi-query operations
+
+**Use Case Comparison:**
+
+| **Blaze**               | **Comet**                  |
+| ----------------------- | -------------------------- |
+| Full-text search        | Vector + Hybrid search     |
+| BM25 ranking            | BM25 + semantic similarity |
+| Keyword matching        | Semantic understanding     |
+| Inverted index          | Multiple vector indexes    |
+| Best for text documents | Best for embeddings + text |
+
+**A vector DB you can read, not just run** - perfect for learning search internals from the inside out.
 
 ## License
 
