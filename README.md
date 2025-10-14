@@ -10,6 +10,9 @@
 **Built for hackers, not hyperscalers.**  
 A tiny, hackable full-text search engine you can actually fit in your head. Features inverted indexing, boolean queries, phrase search, proximity queries, and BM25 ranking—powered by a flexible query engine, roaring bitmaps, and skip lists.
 
+> [!NOTE]
+> This focuses on keyword-based full-text search. For semantic search with embeddings, see [Comet](https://github.com/wizenheimer/comet) ([docs](https://pkg.go.dev/github.com/wizenheimer/comet)).
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -46,9 +49,8 @@ A tiny, hackable full-text search engine you can actually fit in your head. Feat
 
 Blaze is a Go engine that provides fast, full-text search capabilities through an inverted index implementation. It's designed for applications that need to search through text documents efficiently without relying on external search engines.
 
-> **Looking for hybrid search indexes?** Check out [Comet](https://github.com/wizenheimer/comet) - a companion project for hybrid vector search that brings together BM25, Flat, HNSW, IVF, PQ and IVFPQ indexes. It pairs hybrid retrieval with reciprocal rank fusion, autocut, pre-filtering, semantic search, full-text search, and multi-KNN searches, and multi-query operations — all in pure Go.
->
-> Understand search internals from the inside out. Built for hackers, not hyperscalers.
+> [!TIP]
+> Blaze handles keyword-based search (BM25, phrase matching, boolean queries). If you need vector embeddings or hybrid retrieval, [Comet](https://github.com/wizenheimer/comet) ([docs](https://pkg.go.dev/github.com/wizenheimer/comet)) implements HNSW, IVF, and quantization-based indexes with metadata filtering. It's a hybrid vector store written from scratch in Go, purpose built for hackers, not hyperscalers.
 
 **Key Highlights:**
 
@@ -89,19 +91,12 @@ Blaze is a Go engine that provides fast, full-text search capabilities through a
 
 ## Not for Everyone
 
-We'd admit, Blaze isn't for everyone. If you're looking for a production-ready, battle-tested full-text search engine, check out [Bleve](https://github.com/blevesearch/bleve) - a modern, feature-rich indexing library in Go.
+> [!CAUTION]
+> Blaze is an educational implementation. For production use, see [Bleve](https://github.com/blevesearch/bleve) - a mature, battle-tested full-text search library.
 
-If you need **vector search** or **hybrid search** capabilities, check out [Comet](https://github.com/wizenheimer/comet) - **built for hackers, not hyperscalers**. It's a high-performance hybrid vector index written in Go that brings together multiple indexing strategies and search modalities. Comet supports:
+Blaze focuses on keyword-based full-text search with inverted indexes. If you need semantic search with vector embeddings, [Comet](https://github.com/wizenheimer/comet) ([docs](https://pkg.go.dev/github.com/wizenheimer/comet)) implements various vector indexes (Flat, HNSW, IVF, PQ, IVFPQ) along with hybrid retrieval combining BM25 and vector similarity.
 
-- **Multiple Index Types**: Flat (exact), HNSW (graph), IVF (clustering), PQ (quantization), and IVFPQ (hybrid)
-- **Full-Text Search**: BM25 ranking with tokenization and normalization
-- **Metadata Filtering**: Fast filtering using Roaring Bitmaps and Bit-Sliced Indexes
-- **Hybrid Retrieval**: Reciprocal Rank Fusion, semantic search, multi-KNN, and multi-query operations
-- **Advanced Features**: Quantization, reranking, autocut, pre-filtering, soft deletes, and index rebuilds
-
-**Comet — a vector database for people who read source.** If you've ever wondered how vector indexes work, how HNSW graphs are built, or how hybrid search combines semantic and keyword search, layers in pre-filtering, handles rank aggregation, rank fusion etc, Comet gives you a readable, hackable implementation to play with.
-
-Blaze is purpose-built to be hackable. It is tiny enough to fit in your brain and decent enough to blow it. If you've ever wondered how inverted indexes are structured, how BM25 scoring works, or how boolean queries get executed, Blaze gives you a readable, hackable implementation you can learn from and experiment with.
+Blaze is purpose-built to be hackable—small enough to understand completely. If you've ever wondered how inverted indexes are structured, how BM25 scoring works, or how boolean queries execute, Blaze provides a readable implementation to learn from.
 
 ## Installation
 
@@ -2383,10 +2378,9 @@ This geometric distribution ensures O(log n) average performance.
 
 ## Use Cases
 
-> **Choosing Between Blaze and [Comet](https://github.com/wizenheimer/comet):**  
-> Use **Blaze** for keyword-based full-text search (BM25, phrases, boolean queries).  
-> Use **Comet** for semantic search with embeddings (vector similarity, hybrid retrieval, HNSW).  
-> **A hackable playground to understand vector search.**
+> [!NOTE] > **Blaze** handles keyword-based full-text search (BM25, phrases, boolean queries).  
+> **[Comet](https://github.com/wizenheimer/comet)** ([docs](https://pkg.go.dev/github.com/wizenheimer/comet)) handles semantic search with embeddings (vector similarity, hybrid retrieval).  
+> Both are educational implementations optimized for readability.
 
 ### 1. Document Search Systems
 
@@ -3502,11 +3496,9 @@ Bad:
 
 ## Related Projects
 
-### [Comet](https://github.com/wizenheimer/comet) - Hybrid Vector Search
+### [Comet](https://github.com/wizenheimer/comet) ([docs](https://pkg.go.dev/github.com/wizenheimer/comet)) - Hybrid Vector Search
 
-**The hacker's vector DB - A vector database you can actually fit in your head.**
-
-A high-performance hybrid vector search index in Go. Comet complements Blaze by adding vector search capabilities:
+A companion project implementing vector search indexes in Go. While Blaze handles keyword search via inverted indexes, Comet implements semantic search using vector embeddings:
 
 - **Vector Indexes**: Flat, HNSW (graph-based), IVF (clustering), PQ (quantization), IVFPQ (hybrid)
 - **Hybrid Search**: Combines vector similarity, BM25 text search, and metadata filtering
